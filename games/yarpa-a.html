@@ -1,0 +1,1620 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>סימולטור ירפ"א א'</title>
+<style>
+:root{--bg:#0a0f14;--panel:#111922;--line:#263545;--text:#d4e4ee;--dim:#7d93a3;--amber:#ffb000;--red:#ff3b30;--green:#43ff74;--blue:#4aa3ff}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:"Segoe UI",Arial,"Noto Sans Hebrew",sans-serif;overflow:hidden}
+button{font:inherit;cursor:pointer}
+#app{position:fixed;inset:0;display:flex;flex-direction:column}
+#view{position:relative;flex:1;min-height:0;background:#000}
+#gl,#hud{position:absolute;inset:0;width:100%;height:100%;display:block}
+#flash{position:absolute;inset:0;pointer-events:none;background:#ff2a1a;opacity:0;transition:opacity .5s}
+#banner{position:absolute;top:16%;left:50%;transform:translateX(-50%);font-size:28px;font-weight:800;color:#fff;text-shadow:0 2px 10px #000,0 0 2px #000;opacity:0;transition:opacity .4s;pointer-events:none;text-align:center;white-space:nowrap}
+#banner.show{opacity:1}
+#panel{height:178px;display:grid;grid-template-columns:2.3fr 2fr 1.15fr 1.25fr;gap:8px;padding:8px;background:linear-gradient(#141e28,#0d141b);border-top:2px solid #2c3d4e}
+.box{border:1px solid var(--line);border-radius:6px;background:#0c131a;padding:6px 8px;position:relative;overflow:hidden;min-width:0}
+.box h4{margin:0 0 5px;font-size:11px;letter-spacing:.06em;color:var(--dim);font-weight:700}
+#lights{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.light{height:60px;border-radius:4px;border:1px solid #2a2f35;background:#171c21;color:#56616b;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:14px;text-align:center;line-height:1.1;padding:2px}
+.light small{font-weight:500;font-size:10px;opacity:.85;margin-top:4px}
+.light.viol{background:#5c0e0a;color:#ffd6d2;border-color:var(--red);animation:blink .5s steps(2) infinite}
+.light.pend{background:#5a4100;color:#ffe6a6;border-color:var(--amber)}
+.light.on{background:#5c0e0a;color:#ffd6d2;border-color:var(--red)}
+.light.sys{background:#6a0f0a;color:#fff;border-color:var(--red);animation:blink .3s steps(2) infinite}
+@keyframes blink{50%{filter:brightness(.4)}}
+#radio{font-size:14px;line-height:1.35;display:flex;flex-direction:column;gap:3px}
+#radio .msg{padding:3px 7px;border-radius:3px;background:#0f1b25;border-right:3px solid #2e4a60;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#radio .msg.self{border-right-color:var(--green);color:#bff5cf}
+#radio .msg.new{animation:rflash .4s 3}
+@keyframes rflash{50%{background:#2a3d4d}}
+#cs{position:absolute;top:5px;left:8px;font-size:12px;color:var(--amber);font-weight:700}
+.kv{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;padding:2px 0;border-bottom:1px dashed #1d2a36}
+.kv b{font-size:18px;font-family:Consolas,monospace;direction:ltr}
+.kv b.low{color:var(--red)}
+.kv b.on{color:var(--green)}
+.screen{position:fixed;inset:0;background:rgba(6,10,14,.96);display:none;overflow:auto;z-index:10}
+.screen.show{display:block}
+.card{max-width:1020px;margin:28px auto;padding:22px 26px;background:#0f171f;border:1px solid #23323f;border-radius:10px}
+h1{margin:0 0 4px;font-size:30px}
+h2{margin:0 0 12px}
+h3{margin:18px 0 8px;color:#9fc3da;font-size:16px}
+.sub{color:var(--dim);margin:0 0 18px}
+.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{background:#18324a;border:1px solid #2f5a80;color:#e6f2fa;padding:13px 16px;border-radius:7px;text-align:right;font-size:16px}
+.btn:hover{background:#21456a}
+.btn.primary{background:#2b5e2e;border-color:#4b9a50}
+.btn.primary:hover{background:#357a39}
+.btn small{display:block;color:#a9c3d4;font-size:12.5px;margin-top:3px}
+.btn.sm{padding:6px 10px;font-size:13px}
+.opts{display:flex;flex-wrap:wrap;gap:18px;margin:16px 0 4px;align-items:center}
+.opts label{display:flex;gap:6px;align-items:center}
+select,input[type=range]{accent-color:#4b9a50}
+select{background:#0c141b;color:var(--text);border:1px solid #2f4252;border-radius:4px;padding:4px}
+#padstatus{margin-top:12px;padding:9px 12px;border-radius:6px;background:#0b1218;border:1px solid #22313d;font-size:14px}
+.note{color:var(--dim);font-size:13px;line-height:1.55}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{padding:6px;border-bottom:1px solid #1d2a36;text-align:right;vertical-align:middle}
+th{color:var(--dim);font-weight:600}
+.bar{width:160px;height:12px;background:#0a1016;border:1px solid #2a3a48;border-radius:3px;position:relative;direction:ltr;display:inline-block;vertical-align:middle}
+.bar i{position:absolute;top:0;bottom:0;background:#4b9a50}
+.bar.c i{left:50%}
+.cap{color:var(--amber);font-weight:700}
+.pads{display:grid;gap:8px}
+.pad{background:#0b1218;border:1px solid #22313d;border-radius:6px;padding:8px 10px;font-size:13px}
+.pad .ax{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:6px;direction:ltr}
+.pad .ax span{display:inline-flex;gap:5px;align-items:center;font-family:Consolas,monospace;font-size:12px}
+.pad .bt{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;direction:ltr}
+.pad .bt span{min-width:24px;padding:1px 4px;text-align:center;border:1px solid #2a3a48;border-radius:3px;font-size:11px;font-family:Consolas,monospace}
+.pad .bt span.on{background:#4b9a50;color:#000}
+#brief{background:#0a0f14}
+#brief .wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;height:100vh;padding:14px}
+#bmap{width:100%;height:100%;object-fit:contain;background:#000;border:1px solid #2a3a48;border-radius:6px}
+#bside{display:flex;flex-direction:column;gap:10px;overflow:auto}
+#bcount{font-size:46px;font-weight:800;font-family:Consolas,monospace;color:var(--amber);text-align:center;direction:ltr}
+.leg{display:flex;align-items:center;gap:8px;font-size:14px;margin:4px 0}
+.legs td{font-family:Consolas,monospace;direction:ltr;text-align:center}
+#dbody .score{font-size:56px;font-weight:800;font-family:Consolas,monospace;direction:ltr;display:inline-block}
+.grade{display:inline-block;margin-right:12px;padding:4px 10px;border-radius:5px;font-weight:700}
+.log{max-height:260px;overflow:auto;font-size:13px;background:#0b1218;border:1px solid #22313d;border-radius:6px;padding:6px 10px}
+.log div{padding:2px 0;border-bottom:1px solid #141f29}
+.neg{color:#ff8a80}.pos{color:#8dffad}
+#pause .card{max-width:420px;text-align:center;margin-top:18vh}
+kbd{background:#1b2732;border:1px solid #33475a;border-radius:3px;padding:0 5px;font-family:Consolas,monospace;font-size:12px}
+.err{color:#ff8a80}
+body[data-app=a] [data-app=b],body[data-app=b] [data-app=a],body[data-app=a] .sec,body[data-app=b] .sec,body:not([data-app]) .solo,body[data-app] h1[data-app=all]{display:none!important}
+body.a1 #panel,body[data-app=a] #panel{display:none}
+.sec{margin:18px 0 8px;color:#ffd27a;font-size:15px;font-weight:700;border-bottom:1px solid #23323f;padding-bottom:5px}
+
+/* ---- official home screen (Yarpa A) ---- */
+body[data-app=a] #menu{background:#08101f;background-image:linear-gradient(rgba(198,226,74,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(198,226,74,.035) 1px,transparent 1px);background-size:32px 32px}
+body[data-app=a] #menu .card{max-width:none;min-height:100%;margin:0;padding:0;border:0;border-radius:0;background:transparent;display:flex;flex-direction:column}
+body[data-app=a] .mhead{display:flex;justify-content:space-between;align-items:center;padding:14px 28px;background:#0d1a36;border-bottom:2px solid #c6e24a}
+body[data-app=a] .brand{display:flex;align-items:center;gap:14px}
+body[data-app=a] .brand b{display:block;font-size:22px;letter-spacing:.02em;color:#fff}
+body[data-app=a] .brand small{display:block;color:#9fb0cc;font-size:13px;margin-top:2px}
+body[data-app=a] .mark{width:38px;height:38px;border:2px solid #c6e24a;border-radius:50%;position:relative;flex:none}
+body[data-app=a] .mark::before,body[data-app=a] .mark::after{content:"";position:absolute;background:#c6e24a;left:50%;top:50%;transform:translate(-50%,-50%)}
+body[data-app=a] .mark::before{width:14px;height:2px}body[data-app=a] .mark::after{width:2px;height:14px}
+body[data-app=a] .meta{display:flex;align-items:center;gap:12px;color:#9fb0cc;font-size:13px;font-family:Consolas,monospace}
+body[data-app=a] .meta .sep{width:1px;height:16px;background:#2a3f66}
+body[data-app=a] #sysState{color:#c6e24a}
+body[data-app=a] #sysState.warn{color:#ffb000}
+body[data-app=a] .mgrid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);gap:24px;padding:28px;max-width:1180px;width:100%;margin:0 auto;flex:1}
+body[data-app=a] .ptitle{font-size:12px;font-weight:700;letter-spacing:.12em;color:#c6e24a;padding-bottom:7px;margin:0 0 12px;border-bottom:1px solid #22345a}
+body[data-app=a] .mside .ptitle:not(:first-child){margin-top:26px}
+body[data-app=a] #menu .menu-grid{display:flex;flex-direction:column;gap:8px;counter-reset:mi}
+body[data-app=a] #menu .btn{counter-increment:mi;display:grid;grid-template-columns:52px 1fr;grid-template-rows:auto auto;align-items:center;column-gap:4px;background:#0f1d3a;border:1px solid #22345a;border-right:3px solid #3a5280;border-radius:2px;padding:14px 16px;font-size:17px;font-weight:600;color:#e8eefb;transition:background .12s,border-color .12s}
+body[data-app=a] #menu .btn::before{content:counter(mi,decimal-leading-zero);grid-row:1/3;font-family:Consolas,monospace;font-size:20px;color:#5f76a3;font-weight:700}
+body[data-app=a] #menu .btn small{grid-column:2;color:#8fa0bf;font-weight:400;font-size:13px;margin-top:3px}
+body[data-app=a] #menu .btn:hover{background:#152a52;border-right-color:#c6e24a}
+body[data-app=a] #menu .btn:hover::before{color:#c6e24a}
+body[data-app=a] #menu .btn.primary{background:#16295a;border-color:#3a5280;border-right-color:#c6e24a}
+body[data-app=a] #menu .btn.primary::before{color:#c6e24a}
+body[data-app=a] #menu .btn.primary:hover{background:#1d3570}
+body[data-app=a] #menu .opts{display:grid;grid-template-columns:1fr;gap:12px;margin:0}
+body[data-app=a] #menu .opts label{justify-content:space-between;font-size:14px;color:#d6def0;padding:8px 0;border-bottom:1px dashed #1c2c4d}
+body[data-app=a] #menu .opts label.chk{justify-content:flex-start;gap:8px}
+body[data-app=a] #menu select{min-width:110px;background:#0b162e;border:1px solid #2a3f66;border-radius:2px;padding:5px 8px;color:#e8eefb}
+body[data-app=a] #padstatus{margin:0;padding:0;background:transparent;border:0;border-radius:0}
+.srow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed #1c2c4d;font-size:14px;color:#d6def0}
+.srow span:last-child{font-family:Consolas,monospace;font-size:13px;display:flex;align-items:center;gap:7px}
+.srow i{width:9px;height:9px;border-radius:50%;display:inline-block;background:#ff5a4e;box-shadow:0 0 6px #ff5a4e}
+.srow i.on{background:#43ff74;box-shadow:0 0 6px #43ff74}
+.shint{margin-top:10px;font-size:12.5px;color:#8fa0bf;line-height:1.5}
+body[data-app=a] .mfoot{padding:14px 28px;border-top:1px solid #1c2c4d;background:#0a1428}
+body[data-app=a] .mfoot .note{margin:0;font-size:12px;color:#7183a6;max-width:1180px;margin:0 auto}
+body[data-app=a] .mfoot .copy{margin-top:4px}
+body:not([data-app=a]) .mfoot .copy{display:none}
+@media (max-width:820px){body[data-app=a] .mgrid{grid-template-columns:1fr}}
+
+.testpick{display:none}
+body[data-test] .testpick{display:block;margin:6px 0 4px}
+body[data-test] .testpick .ptitle{color:#ffb000;border-bottom-color:#5a4100}
+body[data-test] .tgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+body[data-app=a] #menu .tgrid .btn{display:block;counter-increment:none;font-size:14px;padding:10px 12px;border-right-color:#ffb000}
+body[data-app=a] #menu .tgrid .btn::before{content:none}
+body[data-test] .mhead{border-bottom-color:#ffb000}
+
+#lesson{background:rgba(5,10,28,.78)}
+#courseMenu .ctable{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+#courseMenu .ctable th,#courseMenu .ctable td{padding:7px 8px;border-bottom:1px solid #22345a;text-align:right}
+#courseMenu .ctable th{color:#9fb0d0;font-weight:600;font-size:12px}
+#courseMenu .btn small{display:block;font-size:12px;opacity:.75;font-weight:400}
+#lesson #lbody table{border-collapse:collapse;margin-top:8px}#lesson #lbody td,#lesson #lbody th{padding:3px 12px;border-bottom:1px solid #22345a}
+#lesson .lcard{max-width:660px;margin:7vh auto;background:#0d1a36;border:1px solid #2a3f66;border-top:3px solid #ffb000;border-radius:2px}
+#lesson h2{margin:4px 0 12px;font-size:26px}
+#lesson .lstep{color:#ffb000;font-size:12px;font-weight:700;letter-spacing:.1em}
+#lesson .lprog{display:flex;gap:6px;margin-bottom:12px}
+#lesson .lprog i{flex:1;height:4px;background:#22345a}
+#lesson .lprog i.done{background:#36e04a}#lesson .lprog i.cur{background:#ffb000}
+#lesson #lbody{font-size:15px;line-height:1.7;color:#d6def0}
+#lesson #lbody ul,#lesson #lbody ol{margin:6px 0;padding-right:20px}
+#lesson .ltask{margin-top:14px;padding:10px 12px;background:#132650;border-right:3px solid #36e04a;font-size:15px}
+#lesson .btn{border-radius:2px}
+
+.updbar{display:none;align-items:center;justify-content:space-between;gap:12px;margin:14px auto 0;max-width:1124px;width:calc(100% - 56px);padding:10px 14px;background:#12306a;border:1px solid #36e04a;border-right:4px solid #36e04a;color:#e8eefb;font-size:14px}
+.updbar.show{display:flex}
+.updbar .btn{background:#2b5e2e;border-color:#4b9a50;border-radius:2px}
+
+/* ---- home screen, layout C (tiles) ---- */
+body[data-app=a] .mhead{padding:12px 32px;border-bottom:1px solid #22345a;background:#0d1a36}
+body[data-app=a] .brand b{font-size:20px}
+body[data-app=a] .mark{width:34px;height:34px}
+body[data-app=a] .chips{display:flex;gap:10px;font-size:13px}
+body[data-app=a] .chip{display:inline-flex;align-items:center;gap:7px;padding:6px 13px;border:1px solid #2a3f66;border-radius:20px;color:#cfd9ee}
+body[data-app=a] .sdot{width:9px;height:9px;border-radius:50%;background:#43ff74;box-shadow:0 0 6px #43ff74}
+body[data-app=a] .sdot.warn{background:#ffb000;box-shadow:0 0 6px #ffb000}
+body[data-app=a] #sysState{color:#cfd9ee}
+body[data-app=a] #menu{background:linear-gradient(180deg,#0b1736,#070e22);background-size:auto}
+body[data-app=a] .mgrid{grid-template-columns:1fr;gap:14px;padding:22px 60px 14px;max-width:1240px}
+body[data-app=a] .hello{margin:0;font-size:26px;font-weight:700}
+body[data-app=a] .tiles{display:grid;grid-template-columns:2fr 1fr 1fr;grid-template-rows:150px 150px;gap:14px;margin-top:14px}
+body[data-app=a] .tile{position:relative;text-align:right;background:#0f1d3a;border:1px solid #22345a;border-radius:6px;padding:22px 24px;color:#e8eefb;cursor:pointer;transition:border-color .12s,background .12s,transform .12s;font:inherit}
+body[data-app=a] .tile:hover{border-color:#c6e24a;background:#13244a}
+body[data-app=a] .tile svg{stroke:#c6e24a;fill:none;stroke-width:2.5;display:block}
+body[data-app=a] .tile b{display:block;font-size:19px;margin-top:10px}
+body[data-app=a] .tile small{display:block;color:#9fb0cc;font-size:13px;margin-top:6px;line-height:1.5}
+body[data-app=a] .tile.big{grid-row:1/3;background:linear-gradient(135deg,#1a3575,#0f1d3a);border-color:#c6e24a}
+body[data-app=a] .tile.big:hover{background:linear-gradient(135deg,#1f3f8a,#13244a)}
+body[data-app=a] .tile.big b{font-size:36px}
+body[data-app=a] .tile.big small{font-size:15px}
+body[data-app=a] .tile .go{position:absolute;bottom:26px;right:24px;padding:14px 44px;background:#c6e24a;color:#0a1430;font-weight:700;font-size:18px;border-radius:4px}
+body[data-app=a] .mside{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+body[data-app=a] .panel{background:#0c1834;border:1px solid #1c2c4d;border-radius:6px;padding:12px 18px}
+body[data-app=a] #menu .opts{gap:4px}body[data-app=a] #menu .opts label{padding:5px 0}body[data-app=a] .srow{padding:5px 0}
+body[data-app=a] .mside .ptitle:not(:first-child){margin-top:0}
+body[data-app=a] .testpick{margin:6px 0 0}
+body[data-app=a] .mfoot{display:flex;justify-content:space-between;align-items:center;gap:20px;background:transparent;border-top:1px solid #142445;padding:14px 60px}
+body[data-app=a] .mfoot .note{margin:0;max-width:none}
+body[data-app=a] .mfoot .copy{margin-top:0}
+@media (max-width:980px){body[data-app=a] .tiles{grid-template-columns:1fr 1fr;grid-template-rows:auto}body[data-app=a] .tile.big{grid-column:1/3;grid-row:auto;min-height:200px}body[data-app=a] .mside{grid-template-columns:1fr}}
+
+/* ---- official styling over layout C ---- */
+body[data-app=a] #menu{background:#0a1226;background-image:linear-gradient(rgba(140,160,200,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(140,160,200,.035) 1px,transparent 1px);background-size:24px 24px}
+body[data-app=a] .code{font-family:Consolas,monospace;font-size:10.5px;letter-spacing:.18em;color:#6f82a8;font-weight:400}
+body[data-app=a] .mhead{padding:0 0 0 0;background:#0c1630;border-bottom:1px solid #2a3b5e;box-shadow:inset 0 -2px 0 #c6e24a;align-items:stretch}
+body[data-app=a] .brand{padding:12px 28px;gap:14px;border-left:1px solid #2a3b5e}
+body[data-app=a] .brand b{font-size:19px;letter-spacing:.01em}
+body[data-app=a] .brand small.code{display:block;margin-top:3px}
+body[data-app=a] .mark{width:34px;height:34px;border-radius:0;border:1.5px solid #c6e24a}
+body[data-app=a] .mark::before{width:20px;height:1.5px}body[data-app=a] .mark::after{width:1.5px;height:20px}
+body[data-app=a] .sysbar{display:flex;align-items:stretch}
+body[data-app=a] .sysbar .cell{display:flex;flex-direction:column;justify-content:center;gap:3px;padding:8px 22px;border-right:1px solid #2a3b5e;font-size:13px;color:#dfe6f5;min-width:120px}
+body[data-app=a] .sysbar .cell small{font-size:10.5px;color:#6f82a8;letter-spacing:.04em}
+body[data-app=a] .sysbar .cell>span{display:flex;align-items:center;gap:7px}
+body[data-app=a] .sdot{width:8px;height:8px;border-radius:0;box-shadow:none}
+body[data-app=a] .sdot.warn{box-shadow:none}
+body[data-app=a] .mgrid{padding:22px 48px 14px;gap:14px;max-width:1260px}
+body[data-app=a] .sechead{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #2a3b5e;padding-bottom:8px}
+body[data-app=a] .sechead b{font-size:15px;letter-spacing:.02em;color:#e8eefb}
+body[data-app=a] .tiles{gap:10px;margin-top:12px;grid-template-rows:146px 146px}
+body[data-app=a] .tile{border-radius:0;background:#0f1a33;border:1px solid #26385c;padding:18px 20px;transition:background .1s,border-color .1s}
+body[data-app=a] .tile::before{content:"";position:absolute;top:-1px;left:-1px;right:-1px;height:2px;background:transparent}
+body[data-app=a] .tile:hover{background:#132142;border-color:#3a5283}
+body[data-app=a] .tile:hover::before{background:#c6e24a}
+body[data-app=a] .tile svg{width:28px;height:28px;stroke-width:2;stroke:#c6e24a}
+body[data-app=a] .tile b{font-size:17px;margin-top:12px;font-weight:700}
+body[data-app=a] .tile small{font-size:12.5px;color:#8c9cbd}
+body[data-app=a] .tcode{position:absolute;top:14px;left:16px;font-family:Consolas,monospace;font-size:12px;color:#53698f;letter-spacing:.1em}
+body[data-app=a] .tile.big{background:#111f3d;border-color:#3a5283;border-right:3px solid #c6e24a}
+body[data-app=a] .tile.big:hover{background:#15264a}
+body[data-app=a] .tile.big svg{width:44px;height:44px}
+body[data-app=a] .tile.big b{font-size:30px;margin-top:16px}
+body[data-app=a] .tile.big small{font-size:14px}
+body[data-app=a] .tile .go{border-radius:0;padding:11px 34px;font-size:16px;letter-spacing:.02em;bottom:20px;right:20px}
+body[data-app=a] .panel{border-radius:0;background:#0d172f;border:1px solid #26385c;padding:0}
+body[data-app=a] .panel .ptitle{display:flex;justify-content:space-between;align-items:center;margin:0;padding:9px 16px;background:#111f3d;border-bottom:1px solid #26385c;color:#dfe6f5;font-size:12.5px;letter-spacing:.04em}
+body[data-app=a] .panel>.opts,body[data-app=a] .panel>#padstatus{padding:6px 16px 10px}
+body[data-app=a] #menu select{border-radius:0;background:#0a1226;border-color:#33476e}
+body[data-app=a] .srow i{border-radius:0;box-shadow:none;width:8px;height:8px}
+body[data-app=a] .shint{color:#7d8fb3}
+body[data-app=a] .mfoot{background:#0c1630;border-top:1px solid #2a3b5e;padding:9px 48px}
+body[data-app=a] .mfoot .note{font-size:11.5px;color:#6f82a8}
+body[data-app=a] .updbar{border-radius:0}
+body[data-app=a] .testpick .ptitle{color:#ffb000}
+body[data-app=a] .mgrid{align-content:start}
+body[data-app=a] .mside{align-items:start}
+body[data-app=a] .mfoot a{color:#9fb0cc;text-decoration:none;border-bottom:1px dotted #4a5f88;cursor:pointer;margin-left:14px}
+body[data-app=a] .mfoot a:hover{color:#c6e24a}
+.legal h3{margin-top:20px}.legal p,.legal li{line-height:1.75}.legal .upd{color:var(--dim);font-size:13px}
+
+/* official look for all inner screens (Yarpa A) */
+body[data-app=a] .screen:not(#menu):not(#lesson):not(#pause){background:#0a1226;background-image:linear-gradient(rgba(140,160,200,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(140,160,200,.035) 1px,transparent 1px);background-size:24px 24px}
+body[data-app=a] .screen:not(#menu) .card{border-radius:0;background:#0d172f;border:1px solid #26385c;border-top:2px solid #c6e24a}
+body[data-app=a] .screen:not(#menu) h2{font-size:24px;letter-spacing:.01em;padding-bottom:10px;border-bottom:1px solid #26385c}
+body[data-app=a] .screen:not(#menu) h3{color:#dfe6f5;font-size:15.5px}
+body[data-app=a] .screen .btn{border-radius:0}
+body[data-app=a] .screen table td,body[data-app=a] .screen table th{border-bottom-color:#1c2c4d}
+body[data-app=a] #pause .card{border-top-color:#ffb000}
+body[data-app=a] .beta{display:inline-block;vertical-align:middle;margin-right:8px;padding:2px 7px;font-family:Consolas,monospace;font-size:11px;letter-spacing:.14em;color:#0a1226;background:#ffb000;font-weight:700}
+</style>
+</head>
+<body data-app="a">
+<div id="app">
+  <div id="view">
+    <canvas id="gl"></canvas>
+    <canvas id="hud"></canvas>
+    <div id="flash"></div>
+    <div id="banner"></div>
+  </div>
+  <div id="panel">
+    <div class="box"><h4>לוח התראות</h4><div id="lights"></div></div>
+    <div class="box"><h4>רשת קשר</h4><span id="cs"></span><div id="radio"></div></div>
+    <div class="box"><h4>חימוש והגנות</h4><div id="stores"></div></div>
+    <div class="box"><h4>משימה</h4><div id="mission"></div></div>
+  </div>
+</div>
+
+<div id="menu" class="screen show"><div class="card">
+  <header class="mhead solo" data-app="a">
+    <div class="brand"><span class="mark" aria-hidden="true"></span><div><b>סימולטור ירפ"א א' <span class="beta">BETA</span></b><small class="code" dir="ltr">YARPA-A · TRAINING SYSTEM</small></div></div>
+    <div class="sysbar"><div class="cell"><small>מצב מערכת</small><span><i class="sdot" id="sysDot"></i><span id="sysState">מערכת מוכנה</span></span></div><div class="cell"><small>גרסה</small><span class="mono" dir="ltr"><span class="appver"></span></span></div><div class="cell"><small>תאריך ושעה</small><span class="mono" dir="ltr" id="sysClock">--</span></div></div>
+  </header>
+  <h1 data-app="all">סימולטור ירפ"א – אימון</h1>
+  <h1 class="solo" data-app="b">סימולטור ירפ"א ב' – אימון</h1>
+  <p class="sub" data-app="b">סימולטור אימון בסגנון מבחני הסימולטור במיוני הטיס. עובד עם סטיק ומצערת (HOTAS) או עם מקלדת.</p>
+  <div id="updbar" class="updbar"><span id="updtxt"></span><button class="btn sm" id="updgo">עדכן עכשיו</button></div>
+  <div class="mgrid">
+    <section class="mcol">
+      <div class="sechead solo" data-app="a"><b>תפריט ראשי</b><span class="code" dir="ltr">MAIN MENU</span></div>
+  <div class="tiles" data-app="a">
+    <button class="tile big" data-go="a1"><span class="tcode" dir="ltr">01</span><svg width="56" height="56" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="15"/><path d="M20 13v14M13 20h14"/></svg><b>התחלת אימון</b><small>8 תרגילים: התקרבות, שמירת מרחק, מעקב בפניות ובגובה, וירי</small><span class="go">התחל ◄</span></button>
+    <button class="tile" data-go="course"><span class="tcode" dir="ltr">02</span><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><path d="M6 31V9h28v22zM12 16h16M12 22h10M12 28h6"/></svg><b>קורס הכנה מלא</b><small>10 פרקים מודרכים, שעת תרגול ומבחן מסכם</small></button>
+    <button class="tile" data-go="setup"><span class="tcode" dir="ltr">03</span><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 33V15"/><circle cx="20" cy="11" r="4"/><path d="M12 33h16"/></svg><b>סטיק ומצערת</b><small>זיהוי צירים, היפוך וכפתור ירי</small></button>
+    <button class="tile" data-go="guideA"><span class="tcode" dir="ltr">04</span><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><path d="M9 6h17l6 6v22H9zM14 18h12M14 24h12M14 30h8"/></svg><b>מדריך למשתמש</b><small>המסך, התרגילים ופתרון תקלות</small></button>
+    <button class="tile" data-go="aboutA"><span class="tcode" dir="ltr">05</span><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="14"/><path d="M20 18v10M20 12v1.5"/></svg><b>אודות</b><small>גרסה ופרטי התוכנה</small></button>
+  </div>
+    <div class="testpick">
+      <div class="ptitle">גרסת בדיקה – בחירת תרגיל</div>
+      <div class="tgrid">
+        <button class="btn sm" data-ex="0">0 · תרגול חופשי</button><button class="btn sm" data-ex="1">1 · התקרבות</button>
+        <button class="btn sm" data-ex="2">2 · שמירת מרחק</button><button class="btn sm" data-ex="3">3 · מעקב בפניות</button>
+        <button class="btn sm" data-ex="4">4 · מעקב בגובה</button><button class="btn sm" data-ex="5">5 · מעקב משולב</button>
+        <button class="btn sm" data-ex="6">6 · ירי</button><button class="btn sm" data-ex="7">7 · ירי מתקדם</button>
+      </div>
+    </div>
+
+  <div class="sec">ירפ"א ב' – מבנה ומשימה</div>
+  <div class="menu-grid" data-app="b">
+    <button class="btn primary" data-go="full">מבחן מלא<small>שלב א' (מבנה) ואחריו שלב ב' (משימה), עם תחקיר בסוף</small></button>
+    <button class="btn" data-go="s1">שלב א' – טיסה במבנה<small>שמירת מרחק קבוע מהמוביל והחזקתו בכוונת, 4 רמות קושי</small></button>
+    <button class="btn" data-go="s2">שלב ב' – משימת ניווט ותקיפה<small>מפה ל-15 שניות, ואז טיסה מהזיכרון עם התראות וקשר</small></button>
+    <button class="btn" data-go="help">הוראות ומקשים<small>מה בודקים, איך מנטרלים כל התראה</small></button>
+    <button class="btn solo" data-app="b" data-go="setup">הגדרת סטיק ומצערת<small>זיהוי צירים, היפוך, אזור מת ומיפוי כפתורים</small></button>
+  </div>
+    </section>
+    <aside class="mside">
+      <div class="panel">
+      <div class="ptitle solo" data-app="a">הגדרות אימון<span class="code" dir="ltr">SETTINGS</span></div>
+  <div class="opts">
+    <label data-app="b">רמת קושי
+      <select id="optDiff"><option value="easy">קל</option><option value="normal" selected>רגיל</option><option value="hard">קשה</option></select></label>
+    <label class="chk"><input type="checkbox" id="optPractice"> מצב תרגול <span data-app="b">(מציג מסלול וצבעי מטרות בזמן הטיסה)</span><span data-app="a">– ללא הגבלת ניסיונות</span></label>
+    <label data-app="b"><input type="checkbox" id="optVoice" checked> הקראת קשר בקול (אם יש קול עברי בדפדפן)</label>
+  </div>
+      </div>
+      <div class="panel">
+      <div class="ptitle solo" data-app="a">מצב מערכת<span class="code" dir="ltr">SYSTEM STATUS</span></div>
+      <div id="padstatus"></div>
+      </div>
+    </aside>
+  </div>
+  <footer class="mfoot">
+  <p class="note" data-app="b">זהו סימולטור אימון שנבנה לפי תיאורים פומביים של המבחן (אתרי הכנה וחוויות מועמדים) ואינו התוכנה הרשמית של חיל האוויר. הגרפיקה, הניקוד וספי המעבר כאן הם הערכה שנועדה לתרגל את אותן מיומנויות: קואורדינציה, זיכרון, ריבוי משימות וקבלת החלטות תחת עומס.</p>
+    <p class="note solo" data-app="a">סימולטור אימון עצמאי. אינו התוכנה הרשמית של צה"ל או של חיל האוויר ואינו קשור אליהם.</p>
+    <p class="note solo copy" data-app="a"><a data-go="termsA">תנאי שימוש</a><a data-go="privacyA">מדיניות פרטיות</a>© 2026 יניר בן שמעון · כל הזכויות שמורות</p>
+  </footer>
+</div></div>
+
+<div id="help" class="screen"><div class="card">
+  <h2>הוראות</h2>
+  <h3>שליטה</h3>
+  <p class="note">סטיק: ימינה/שמאלה = גלגול, משיכה לאחור = הרמת אף. מצערת = מהירות. במקלדת: חיצים לגלגול ועלרוד (חץ למטה = הרמת אף), <kbd>W</kbd>/<kbd>S</kbd> להגברה והורדה של המצערת.</p>
+  <table id="helpkeys"></table>
+  <h3>שלב א' – טיסה במבנה</h3>
+  <p class="note">מטוס מוביל טס לפניך ומשנה מהירות, כיוון וגובה. שמור אותו בתוך הטבעת שבמרכז ה-HUD ובמרחק 300 מטר (פס הטווח מימין). החזק את שני התנאים ברצף עד שפס ההחזקה מתמלא – זו הצלחה אחת. שלוש הצלחות מעבירות לרמה הבאה. ברמות 3–4 נדלקות גם תקלות מערכת שצריך לנטרל.</p>
+  <h3>שלב ב' – משימה</h3>
+  <p class="note">לפני הטיסה מוצגת מפה לזמן קצר: מסלול עם נקודות ציון, מטרות בעדיפות (אדום עם טבעת), מטרות דמה (כחול – אסור לפגוע) ואיומי קרקע (משולש צהוב עם רדיוס). בטיסה עצמה כל המטרות נראות זהות (כדורים) וכל האיומים זהים (קונוסים) – צריך לזכור. טוס במסלול, שמור על טווח הגובה מעל הקרקע ועל טווח המהירות, והפצץ רק את מטרות העדיפות (העזר בנקודת הפגיעה המחושבת – העיגול הקטן ב-HUD).</p>
+  <ul class="note">
+    <li><b>גובה / מהירות / נתיב:</b> כשיש חריגה הנורה מהבהבת באדום. תקן את החריגה – הנורה תהפוך לכתומה – ואז לחץ "אישור התראה". אישור לפני התיקון נחשב טעות.</li>
+    <li><b>תקלות מערכת (מנוע, הידראוליקה, דלק, חשמל):</b> לחץ על הכפתור הייעודי לאותה תקלה תוך כמה שניות. כפתור שגוי = טעות.</li>
+    <li><b>איום קרקע:</b> כשנכנסים לטווח סוללה הנורה נדלקת. הפעל ל"א (כמות מוגבלת) – אחרת יישוגר טיל. שימוש מיותר = טעות.</li>
+    <li><b>איום אוויר:</b> מטוס אויב מתקרב. כשהוא בתוך העיגול ומופיע LOCK – ירי. אם לא תפיל אותו הוא ישגר טיל.</li>
+    <li><b>טיל:</b> שחרר נורים מיד. נורים בלי טיל באוויר = בזבוז.</li>
+    <li><b>קשר:</b> ענה ("קיבלתי") רק לקריאות לאות הקריאה שלך, וציית להוראות שינוי גובה ומהירות. מענה לקריאה של מישהו אחר = טעות.</li>
+  </ul>
+  <button class="btn sm" data-go="menu">חזרה</button>
+</div></div>
+
+<div id="setup" class="screen"><div class="card">
+  <h2>הגדרת סטיק ומצערת</h2>
+  <p class="note">הדפדפן חושף את ההתקן רק אחרי לחיצה על כפתור כלשהו בו. סט של סטיק ומצערת נפרדים מופיע כשני התקנים – זה נתמך. לחץ "זהה" והזז את הציר עד הסוף.</p>
+  <div id="pads" class="pads"></div>
+  <h3>צירים</h3>
+  <table id="axtable"></table>
+  <div class="opts">
+    <label>אזור מת <input type="range" id="optDead" min="0" max="0.25" step="0.01"> <span id="deadv"></span></label>
+    <label>רגישות <input type="range" id="optSens" min="0.5" max="1.6" step="0.05"> <span id="sensv"></span></label>
+  </div>
+  <h3>כפתורים</h3>
+  <p class="note">לחץ "הגדר" ואז לחץ על הכפתור הרצוי בסטיק או במצערת (גם כובע/HAT נתמך). המקשים במקלדת פעילים תמיד במקביל.</p>
+  <table id="bttable"></table>
+  <div class="opts"><button class="btn sm primary" id="setupSave">שמור וחזור</button><button class="btn sm" id="setupReset">איפוס לברירת מחדל</button></div>
+</div></div>
+
+<div id="intro" class="screen"><div class="card"><div id="introbody"></div>
+  <div class="opts"><button class="btn primary" id="introGo">התחל (או לחיצה על ירי)</button><button class="btn sm" data-go="menu">חזרה לתפריט</button></div>
+</div></div>
+
+<div id="brief" class="screen"><div class="wrap">
+  <canvas id="bmap" width="900" height="900"></canvas>
+  <div id="bside">
+    <div id="bcount"></div>
+    <div class="box" id="binfo"></div>
+    <div class="box"><h4>מקרא</h4><div id="blegend"></div></div>
+    <div class="box"><h4>קטעי מסלול</h4><table class="legs" id="blegs"></table></div>
+    <button class="btn primary" id="briefGo">התחל משימה</button>
+  </div>
+</div></div>
+
+<div id="guideA" class="screen"><div class="card">
+  <h2>מדריך למשתמש – ירפ"א א'</h2>
+  <h3>התחלה מהירה</h3>
+  <ol class="note">
+    <li>חבר את הסטיק והמצערת למחשב <b>לפני</b> פתיחת התוכנה, ולחץ על כפתור כלשהו בהם כדי שיזוהו.</li>
+    <li>בפעם הראשונה היכנס ל"הגדרת סטיק ומצערת": לחץ "זהה" לכל ציר והזז אותו עד הסוף, סמן "הפוך" אם צריך, הגדר את כפתור הירי ולחץ "שמור".</li>
+    <li>בפעם הראשונה מומלץ לעבור את "מדריך אינטראקטיבי": 8 שלבים קצרים שמלמדים כל מדד בנפרד, עם תרגול בכל שלב, עד שבסוף מגיעים להכל ביחד.</li>
+    <li>אחר כך לחץ "התחלת אימון". לפני כל תרגיל מוצגות ההוראות – לחיצה על ירי מתחילה.</li>
+  </ol>
+  <h3>המסך</h3>
+  <table>
+    <tr><td><b>עיגול וצלב (מרכז)</b></td><td>אזור המטרה. העיגול נצבע בצהוב בנעילה ובירוק כשהתרגיל הושלם או כשיש אישור ירי.</td></tr>
+    <tr><td><b>מטוס המטרה</b></td><td>משולש לבן עם כנפיים ישרות. טס במהירות קבועה; בתרגילים המתקדמים פונה ומשנה גובה. אם יצא מהמסך – חץ צהוב מצביע אליו.</td></tr>
+    <tr><td><b>מד מהירות (שמאל)</b></td><td>ההפרש בין המהירות שלך למהירות המטרה, בקשרים. ירוק = יציב (±10), מעל 0 = מתקרב, מתחת ל-0 = מתרחק.</td></tr>
+    <tr><td><b>מצערת (מתחת למד המהירות)</b></td><td>ערך המצערת, בין ‎−10‎ ל-‎+10‎.</td></tr>
+    <tr><td><b>מרחק מהמטוס (ימין)</b></td><td>המרחק במטרים. אזור היעד מסומן בירוק והבר נצבע ירוק כשאתה בתוכו. החץ הלבן מראה אם המרחק נסגר או נפתח ובאיזה קצב.</td></tr>
+    <tr><td><b>זווית</b></td><td>הזווית במעלות בין כיוון המטוס שלך למטרה. 0 = המטרה בדיוק במרכז.</td></tr>
+    <tr><td><b>שורה תחתונה</b></td><td>תחמושת, אחוזי פגיעה ונורת נעילה: צהוב = ננעל, ירוק = נעול – אפשר לירות.</td></tr>
+    <tr><td><b>למעלה</b></td><td>הזמן שנותר (מרכז), הוראות התרגיל (ימין), מספר התרגיל והניסיון (שמאל).</td></tr>
+  </table>
+  <h3>המצערת</h3>
+  <p class="note">המצערת קובעת את <b>התאוצה</b>: <b>0 (מרכז)</b> = המטוס שומר על המהירות שאליה הגעת. ערכים חיוביים מאיצים, ערכים שליליים מאטים, וככל שהערך גדול יותר התאוצה חזקה יותר (עד הפרש של ±100 קשר מול המטרה). כמו במטוס אמיתי, התאוצה נבנית ודועכת בהדרגה – החזר ל-0 קצת לפני שמגיעים למהירות הרצויה. כדי להאט צריך לתת מצערת שלילית.</p>
+  <h3>התרגילים</h3>
+  <table>
+    <tr><th>#</th><th>תרגיל</th><th>מה צריך</th></tr>
+    <tr><td>0</td><td>תרגול חופשי</td><td>היכרות עם השליטה, ללא ניקוד</td></tr>
+    <tr><td>1</td><td>התקרבות ושמירת מרחק</td><td>חלון מרחק של 200 מ' בעיגול, 5 שניות ברצף</td></tr>
+    <tr><td>2</td><td>שמירת מרחק מדויקת</td><td>חלון מרחק של 200 מ' בעיגול, 10 שניות ברצף</td></tr>
+    <tr><td>3</td><td>מעקב בפניות</td><td>חלון מרחק של 200 מ' בעיגול, 8 שניות ברצף</td></tr>
+    <tr><td>4</td><td>מעקב בשינויי גובה</td><td>חלון מרחק של 200 מ' בעיגול, 8 שניות ברצף</td></tr>
+    <tr><td>5</td><td>מעקב משולב</td><td>חלון מרחק של 200 מ' בעיגול, 10 שניות ברצף</td></tr>
+    <tr><td>6</td><td>ירי</td><td>טווח של 200 מ' וזווית מקסימלית, 5 שניות להינעל, 20 פגיעות, 100 פגזים</td></tr>
+    <tr><td>7</td><td>ירי מתקדם</td><td>כמו 6, מטרה מתמרנת יותר</td></tr>
+  </table>
+  <p class="note"><b>חלון המרחק:</b> בכל ניסיון נבחר חלון מרחק ברוחב 200 מ' (למשל 400–600 או 600–800). החלון מופיע בהוראות ומסומן בירוק במד המרחק.</p>
+  <p class="note"><b>תנאי נעילה בתרגילי הירי:</b> בכל ניסיון נקבעים <b>טווח</b> (חלון של 200 מ') ו<b>זווית מקסימלית</b> (2°–3.5°). שניהם מופיעים בהוראות, העיגול במרכז מצטייר לפי הזווית המותרת, ותיבת "זוית" מציגה את הזווית הנוכחית. צריך לעמוד בשני התנאים 5 שניות ברצף כדי להינעל, ורק אז אפשר לירות.</p>
+  <p class="note"><b>אחוז פגיעה:</b> לכל ניסיון יש אחוז פגיעה <b>מרבי</b> לפי חלון המרחק (כ-83% בחלון 300–500, 69% ב-400–600, 55% ב-500–700, 41% ב-600–800) – ואי אפשר לעבור אותו. מתחת למרבי, הסיכוי בפועל יורד לפי הזווית (רק במרכז העיגול מקבלים את המרבי), לפי המרחק בתוך החלון (הקצה הקרוב עדיף) ולפי היציבות (מד מהירות קרוב ל-0). תיבת "אחוזי פגיעה" מציגה את הסיכוי הנוכחי מרגע הנעילה; מחוץ לתנאים היא מציגה "--".</p>
+  <p class="note">לכל תרגיל זמן קצוב ו-6 ניסיונות (במצב תרגול – ללא הגבלה). ניסיון נכשל אם נגמר הזמן, אם עברת את המטרה, אם התרחקת ממנה מעל 3 ק"מ או התנגשת בה. כשנגמרים הניסיונות עוברים לתרגיל הבא. בסוף מוצג תחקיר.</p>
+  <h3>מקלדת (במקום סטיק)</h3>
+  <table>
+    <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>גלגול</td></tr>
+    <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>עלרוד (חץ למטה = הרמת אף)</td></tr>
+    <tr><td><kbd>W</kbd> / <kbd>S</kbd></td><td>הגברה / הורדה של המצערת</td></tr>
+    <tr><td><kbd>X</kbd></td><td>איפוס המצערת ל-0</td></tr>
+    <tr><td><kbd>Space</kbd></td><td>ירי / התחלת תרגיל (החזקה = צרור)</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>השהיה</td></tr>
+    <tr><td><kbd>F11</kbd></td><td>מסך מלא (באפליקציה)</td></tr>
+  </table>
+  <h3>פתרון תקלות</h3>
+  <ul class="note">
+    <li><b>הסטיק לא מזוהה:</b> סגור את התוכנה, חבר מחדש בכניסת USB אחרת, פתח שוב ולחץ על כפתור בסטיק. אפשר לבדוק ב-Windows: Win+R ← <kbd>joy.cpl</kbd>.</li>
+    <li><b>כיוון הפוך:</b> בהגדרות סמן "הפוך" ליד הציר.</li>
+    <li><b>T.Flight HOTAS One / 4:</b> במחשב הם מזוהים לפעמים כבקר Xbox. אם המצערת לא זוהתה אוטומטית, לחץ "זהה" ליד מצערת והזז אותה מקצה לקצה – גם מצערת שמדווחת כ"טריגר" נתמכת. ב-HOTAS 4 ודא שמתג המצב על PC.</li>
+    <li><b>המטוס זז לבד:</b> הגדל מעט את "אזור מת" בהגדרות.</li>
+    <li><b>המצערת לא מתאפסת ל-0:</b> ודא שהציר הנכון זוהה, ושבמרכז המצערת הפס בהגדרות באמצע.</li>
+  </ul>
+  <div class="opts"><button class="btn sm" data-go="menu">חזרה</button></div>
+</div></div>
+
+<div id="aboutA" class="screen"><div class="card">
+  <h2>אודות</h2>
+  <p class="note"><b>סימולטור ירפ"א א' – אימון</b> · גרסה <span class="appver"></span></p>
+  <p class="note"><b>גרסת בטא:</b> זוהי גרסת ניסיון שעדיין בפיתוח, לפני השקה רשמית. ייתכנו בה שינויים, תקלות ותכונות חסרות.</p>
+  <p class="note">סימולטור אימון למיומנויות מעקב, שמירת מרחק וירי, בסגנון מבחן הסימולטור הראשון במיוני הטיס.</p>
+  <p class="note">התוכנה נבנתה לפי תיאורים פומביים של המבחן ואינה התוכנה הרשמית של צה"ל או של חיל האוויר, ואינה קשורה אליהם. הגרפיקה, הניקוד והדרישות בכל תרגיל הם הערכה שנועדה לתרגל את אותן מיומנויות.</p>
+  <p class="note">© 2026 יניר בן שמעון. כל הזכויות שמורות.</p>
+  <p class="note"><a data-go="termsA" style="cursor:pointer;color:#c6e24a">תנאי שימוש</a> · <a data-go="privacyA" style="cursor:pointer;color:#c6e24a">מדיניות פרטיות</a></p>
+  <div class="opts"><button class="btn sm" data-go="menu">חזרה</button></div>
+</div></div>
+
+<div id="courseMenu" class="screen"><div class="card">
+  <h2>קורס הכנה מלא – ירפ"א א'</h2>
+  <p class="note">הקורס בנוי בהדרגה: בכל פרק מוצג מדד חדש ומתרגלים אותו בתרגילים קצרים של דקה או 40 שניות. בפרקים הראשונים הסטיק נעול ועובדים רק עם המצערת; בהמשך מצטרפים הכוונת, הזווית, הנעילה, אחוזי הפגיעה והירי. המטרה מתמרנת יותר מהרגיל ומתחילה בכל תרגיל בכיוון אחר.</p>
+  <p class="note mono" id="cinfo"></p>
+  <div class="opts"><button class="btn primary" id="cresume"></button><button class="btn primary" id="cstart">התחל מההתחלה</button></div>
+  <table class="ctable"><thead><tr><th>#</th><th>פרק</th><th>תרגילים</th><th>משך</th><th>תוצאה אחרונה</th><th></th></tr></thead><tbody id="cmodules"></tbody></table>
+  <div class="sec">אחרי הקורס</div>
+  <div class="opts"><button class="btn" id="cpractice">שעת תרגול<small>78 תרגילים מעורבים, 40 שניות כל אחד</small></button><button class="btn" id="cexam">מבחן מסכם<small>6 סוגי תרגילים × 4 חזרות, עם ציון</small></button></div>
+  <p class="note">ההתקדמות נשמרת במחשב הזה. אפשר לצאת באמצע ולהמשיך מאותו פרק. ב-Esc משהים.</p>
+  <div class="opts"><button class="btn sm" data-go="menu">חזרה</button></div>
+</div></div>
+
+<div id="lesson" class="screen"><div class="card lcard">
+  <div class="lprog" id="lprog"></div>
+  <div class="lstep" id="lstep"></div>
+  <h2 id="ltitle"></h2>
+  <div id="lbody" class="note"></div>
+  <div class="ltask"><b>המשימה:</b> <span id="ltask"></span></div>
+  <div class="opts"><button class="btn primary" id="lgo">התחל תרגול (ירי)</button><button class="btn sm" id="lskip">דלג לשלב הבא</button><button class="btn sm" data-go="menu">יציאה לתפריט</button></div>
+</div></div>
+
+<div id="termsA" class="screen"><div class="card legal">
+  <h2>תנאי שימוש</h2>
+  <p class="upd">עדכון אחרון: נובמבר 2026</p>
+  <p class="note">ברוכים הבאים לסימולטור ירפ"א א' ("התוכנה"). התוכנה פותחה ונמצאת בבעלות יניר בן שמעון ("בעל הזכויות"). השימוש בתוכנה מהווה הסכמה לתנאים אלה. אם אינך מסכים להם – אל תשתמש בתוכנה.</p>
+  <h3>1. מהות התוכנה</h3>
+  <p class="note">התוכנה היא סימולטור אימון עצמאי לתרגול מיומנויות מעקב, שמירת מרחק וירי, בהשראת מבחני המיון לקורס טיס. התוכנה נבנתה על בסיס מידע פומבי, <b>אינה התוכנה הרשמית של צה"ל או של חיל האוויר, אינה קשורה אליהם ואינה מאושרת על ידם</b>. התרגילים, הגרפיקה, הניקוד והדרישות הם הערכה בלבד, ואין כל התחייבות שהם זהים למבחן האמיתי.</p>
+  <h3>2. אין התחייבות לתוצאה</h3>
+  <p class="note">השימוש בתוכנה נועד לתרגול בלבד. בעל הזכויות אינו מתחייב, במפורש או במשתמע, שהשימוש בתוכנה ישפר את תוצאות המיונים, יביא למעבר שלב כלשהו או לקבלה לקורס.</p>
+  <h3>3. רישיון שימוש</h3>
+  <p class="note">בעל הזכויות מעניק לך רישיון אישי, מוגבל, שאינו בלעדי ואינו ניתן להעברה, להשתמש בתוכנה לצורכי תרגול אישי בלבד, בהתאם לתנאים אלה ולתנאי הגישה שסוכמו איתך (לרבות תקופת גישה, אם נקבעה).</p>
+  <h3>4. שימושים אסורים</h3>
+  <ul class="note">
+    <li>העתקה, הפצה, מכירה, השכרה או מסירה של התוכנה או של כל חלק ממנה לאחרים, ללא אישור מראש ובכתב מבעל הזכויות.</li>
+    <li>שינוי, פירוק, הנדסה לאחור או ניסיון לחלץ את קוד המקור של התוכנה.</li>
+    <li>פיתוח, הפצה או מכירה של מוצר דומה או מתחרה על בסיס התוכנה, העיצוב או התוכן שלה.</li>
+    <li>הסרה או שינוי של סימני זכויות יוצרים, שם בעל הזכויות או הודעות אחרות בתוכנה.</li>
+    <li>שימוש מסחרי בתוכנה (למשל במסגרת שירותי הכנה בתשלום) ללא הסכם מתאים עם בעל הזכויות.</li>
+  </ul>
+  <h3>5. קניין רוחני</h3>
+  <p class="note">כל הזכויות בתוכנה – לרבות הקוד, העיצוב, הממשק, התרגילים, הטקסטים והגרפיקה – שייכות לבעל הזכויות ומוגנות בדיני זכויות יוצרים וקניין רוחני. אין בתנאים אלה כדי להעביר אליך זכות כלשהי בתוכנה מלבד רישיון השימוש המוגבל המתואר לעיל.</p>
+  <h3>6. עדכונים</h3>
+  <p class="note">התוכנה עשויה לבדוק מעת לעת אם קיימת גרסה חדשה ולהוריד אותה. בעל הזכויות רשאי לשנות, לעדכן, להוסיף או להסיר תכונות ותרגילים בכל עת.</p>
+  <h3>7. קטינים</h3>
+  <p class="note">אם אתה מתחת לגיל 18, השימוש בתוכנה, ובמיוחד רכישת גישה בתשלום, מותנה בהסכמת הורה או אפוטרופוס.</p>
+  <h3>8. אחריות</h3>
+  <p class="note">התוכנה ניתנת "כפי שהיא" (AS IS), ללא אחריות מכל סוג. בעל הזכויות לא יישא באחריות לכל נזק ישיר או עקיף הנובע מהשימוש בתוכנה או מחוסר היכולת להשתמש בה, לרבות תקלות, אובדן מידע או תוצאות במיונים, ככל שהדין מתיר זאת.</p>
+  <h3>9. הפסקת שימוש</h3>
+  <p class="note">בעל הזכויות רשאי להפסיק או להגביל את הגישה לתוכנה למי שמפר תנאים אלה.</p>
+  <h3>10. דין וסמכות שיפוט</h3>
+  <p class="note">על תנאים אלה יחולו דיני מדינת ישראל, וסמכות השיפוט הבלעדית בכל עניין הנוגע להם תהיה לבתי המשפט המוסמכים בישראל.</p>
+  <h3>11. יצירת קשר</h3>
+  <p class="note">בכל שאלה בנוגע לתנאים אלה ניתן לפנות לבעל הזכויות: <span class="contact"></span></p>
+  <div class="opts"><button class="btn sm" data-go="menu">חזרה</button><button class="btn sm" data-go="privacyA">מדיניות פרטיות</button></div>
+</div></div>
+
+<div id="privacyA" class="screen"><div class="card legal">
+  <h2>מדיניות פרטיות</h2>
+  <p class="upd">עדכון אחרון: נובמבר 2026</p>
+  <p class="note">מדיניות זו מסבירה איזה מידע התוכנה סימולטור ירפ"א א' ("התוכנה") שומרת ומשתמשת בו. בעל התוכנה הוא יניר בן שמעון.</p>
+  <h3>1. מידע שאנחנו לא אוספים</h3>
+  <p class="note">התוכנה <b>אינה</b> אוספת ואינה שולחת לבעל הזכויות או לגורם אחר שם, אימייל, מספר טלפון, תוצאות תרגילים או כל מידע אישי אחר. התוכנה אינה כוללת כלי מעקב, פרסומות או ניתוח שימוש (Analytics).</p>
+  <h3>2. מידע שנשמר במחשב שלך בלבד</h3>
+  <ul class="note">
+    <li><b>הגדרות הבקר:</b> מיפוי הצירים והכפתורים של הסטיק והמצערת, ההיפוך, האזור המת והרגישות.</li>
+    <li><b>גרסת התוכנה שהורדה:</b> קובץ העדכון האחרון שהותקן.</li>
+  </ul>
+  <p class="note">מידע זה נשמר רק במחשב שבו התוכנה מותקנת, ונמחק אם מוחקים את התוכנה ואת תיקיית הנתונים שלה.</p>
+  <h3>3. בדיקת עדכונים</h3>
+  <p class="note">בכל הפעלה התוכנה פונה לשרת עדכונים (שירות האחסון GitHub) כדי לבדוק אם יש גרסה חדשה ולהוריד אותה. בפנייה כזו, כמו בכל גלישה באינטרנט, השרת מקבל מידע טכני בסיסי כגון כתובת ה-IP של המחשב. התוכנה אינה שולחת בפנייה זו מידע אישי. השימוש בשירות כפוף גם למדיניות הפרטיות של GitHub.</p>
+  <h3>4. בקרי משחק</h3>
+  <p class="note">התוכנה קוראת את תנועות הסטיק, המצערת והמקלדת רק בזמן שהיא פתוחה, ורק כדי להפעיל את הסימולטור. נתונים אלה אינם נשמרים ואינם נשלחים לשום מקום.</p>
+  <h3>5. קטינים</h3>
+  <p class="note">התוכנה מיועדת גם למועמדים צעירים. מכיוון שהיא אינה אוספת מידע אישי, אין בה עיבוד של מידע על קטינים.</p>
+  <h3>6. שינויים במדיניות</h3>
+  <p class="note">אם בעתיד יתווספו לתוכנה חשבונות משתמשים, תשלומים או שירות מקוון, מדיניות זו תעודכן בהתאם לפני שיתחיל איסוף מידע כלשהו.</p>
+  <h3>7. יצירת קשר</h3>
+  <p class="note">בכל שאלה בנוגע לפרטיות ניתן לפנות לבעל הזכויות: <span class="contact"></span></p>
+  <div class="opts"><button class="btn sm" data-go="menu">חזרה</button><button class="btn sm" data-go="termsA">תנאי שימוש</button></div>
+</div></div>
+
+<div id="pause" class="screen"><div class="card">
+  <h2>מושהה</h2>
+  <div class="opts" style="justify-content:center"><button class="btn primary" id="resume">המשך</button><button class="btn" id="abort">סיים וחזור לתפריט</button></div>
+</div></div>
+
+<div id="debrief" class="screen"><div class="card"><div id="dbody"></div>
+  <div class="opts"><button class="btn primary" id="again">שוב</button><button class="btn" data-go="menu">תפריט ראשי</button></div>
+</div></div>
+
+<script>
+'use strict';
+/* ================= utilities ================= */
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t;
+const smooth=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t)};
+const DEG=Math.PI/180, KT=1.94384, FT=3.28084;
+const rr=(a,b)=>a+(b-a)*Math.random(), pick=a=>a[Math.floor(Math.random()*a.length)];
+const add=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]], sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]], scl=(a,s)=>[a[0]*s,a[1]*s,a[2]*s];
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const len=a=>Math.hypot(a[0],a[1],a[2]), norm=a=>{const l=len(a)||1;return[a[0]/l,a[1]/l,a[2]/l]};
+const d2=(a,b)=>Math.hypot(a[0]-b[0],a[2]-b[2]);
+const wrapPi=a=>{while(a>Math.PI)a-=2*Math.PI;while(a<-Math.PI)a+=2*Math.PI;return a};
+const approach=(v,t,d)=>v<t?Math.min(t,v+d):Math.max(t,v-d);
+const fmtT=s=>{s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+const hdgOf=f=>(Math.atan2(f[0],-f[2])/DEG+360)%360;
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+/* ================= noise & terrain ================= */
+function hash2(x,z){let h=(Math.imul(x,374761393)+Math.imul(z,668265263))|0;h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return(h>>>0)/4294967296}
+function vnoise(x,z){const xi=Math.floor(x),zi=Math.floor(z),xf=x-xi,zf=z-zi,u=xf*xf*(3-2*xf),v=zf*zf*(3-2*zf);
+  return lerp(lerp(hash2(xi,zi),hash2(xi+1,zi),u),lerp(hash2(xi,zi+1),hash2(xi+1,zi+1),u),v)}
+function fbm(x,z,o){let s=0,a=.5,f=1,n=0;for(let i=0;i<o;i++){s+=a*vnoise(x*f+i*17.3,z*f-i*9.1);n+=a;a*=.5;f*=2.03}return s/n}
+const T={N:240,SIZE:48000};T.cell=T.SIZE/T.N;T.half=T.SIZE/2;T.n1=T.N+1;T.h=new Float32Array(T.n1*T.n1);
+function rawHeight(x,z){
+  const coast=-15000+2600*(vnoise(z*.00018,4.2)-.5)*2;
+  const e=smooth(coast,coast+7000,x);
+  const n=fbm(x*.00011+3.1,z*.00011+7.7,5);
+  const m=clamp((n-.3)/.45,0,1);
+  const r=1-Math.abs(vnoise(x*.00026+1.7,z*.00026-2.3)*2-1);
+  const hill=40+1250*m*m+260*r*r*(.3+m);
+  return e*hill+(1-e)*(-60);
+}
+function triH(arr,x,z){const fx=(x+T.half)/T.cell,fz=(z+T.half)/T.cell;let i=Math.floor(fx),j=Math.floor(fz);
+  if(i<0||j<0||i>=T.N||j>=T.N)return -60;const tx=fx-i,tz=fz-j,n1=T.n1;
+  const a=arr(i,j),b=arr(i+1,j),c=arr(i,j+1),d=arr(i+1,j+1);
+  return tx+tz<1?a+(b-a)*tx+(c-a)*tz:d+(c-d)*(1-tx)+(b-d)*(1-tz)}
+const gAt=(i,j)=>Math.max(0,T.h[j*T.n1+i]), rAt=(i,j)=>T.h[j*T.n1+i];
+const groundAt=(x,z)=>Math.max(0,triH(gAt,x,z)), rawAt=(x,z)=>triH(rAt,x,z);
+function terrainColor(h,x,z){
+  const v=(hash2(Math.floor(x/97),Math.floor(z/113))-.5)*.06+(vnoise(x*.002,z*.002)-.5)*.1;
+  if(h<=0)return[.17,.36,.56];
+  if(h<14)return[.8+v,.74+v,.55+v];
+  let c;
+  if(h<350){const f=vnoise(x*.0011,z*.0011);c=f<.33?[.42,.55,.27]:f<.6?[.55,.6,.33]:[.66,.6,.4];}
+  else{const t=clamp((h-350)/550,0,1);c=[lerp(.4,.55,t),lerp(.5,.47,t),lerp(.26,.36,t)];}
+  if(h>900){const t=clamp((h-900)/400,0,1);c=[lerp(c[0],.6,t),lerp(c[1],.58,t),lerp(c[2],.54,t)];}
+  return[c[0]+v,c[1]+v,c[2]+v];
+}
+function buildHeights(){for(let j=0;j<T.n1;j++)for(let i=0;i<T.n1;i++)T.h[j*T.n1+i]=rawHeight(-T.half+i*T.cell,-T.half+j*T.cell)}
+
+/* ================= math ================= */
+function perspective(fy,asp,n,f){const t=1/Math.tan(fy/2),nf=1/(n-f);return new Float32Array([t/asp,0,0,0,0,t,0,0,0,0,(f+n)*nf,-1,0,0,2*f*n*nf,0])}
+function lookAt(e,c,up){const z=norm(sub(e,c)),x=norm(cross(up,z)),y=cross(z,x);
+  return new Float32Array([x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-dot(x,e),-dot(y,e),-dot(z,e),1])}
+function mmul(a,b){const o=new Float32Array(16);for(let i=0;i<4;i++)for(let j=0;j<4;j++){let s=0;for(let k=0;k<4;k++)s+=a[k*4+j]*b[i*4+k];o[i*4+j]=s}return o}
+function basisM(p,r,u,f,s=1){return new Float32Array([r[0]*s,r[1]*s,r[2]*s,0,u[0]*s,u[1]*s,u[2]*s,0,f[0]*s,f[1]*s,f[2]*s,0,p[0],p[1],p[2],1])}
+function tsM(p,s,sy){sy=sy??s;return new Float32Array([s,0,0,0,0,sy,0,0,0,0,s,0,p[0],p[1],p[2],1])}
+function rotPair(a,b,ang){const c=Math.cos(ang),s=Math.sin(ang);return[add(scl(a,c),scl(b,s)),sub(scl(b,c),scl(a,s))]}
+const rotY=(v,t)=>{const c=Math.cos(t),s=Math.sin(t);return[v[0]*c+v[2]*s,v[1],-v[0]*s+v[2]*c]};
+function frameFromDir(f){const r=norm(cross(f,[0,1,0]));return{f,r,u:cross(r,f)}}
+
+/* ================= WebGL ================= */
+const glc=$('#gl'),hud=$('#hud'),hx=hud.getContext('2d');
+const gl=glc.getContext('webgl2',{antialias:true,powerPreference:'high-performance'});
+const VS=`#version 300 es
+in vec3 aPos;in vec3 aNor;in vec3 aCol;uniform mat4 uVP;uniform mat4 uM;out vec3 vCol;out vec3 vNor;out vec3 vW;
+void main(){vec4 w=uM*vec4(aPos,1.0);vW=w.xyz;vNor=mat3(uM)*aNor;vCol=aCol;gl_Position=uVP*w;}`;
+const FS=`#version 300 es
+precision highp float;in vec3 vCol;in vec3 vNor;in vec3 vW;
+uniform vec3 uLight;uniform vec3 uFog;uniform vec2 uFogR;uniform vec3 uCam;uniform vec3 uTint;uniform float uEmis;out vec4 o;
+void main(){vec3 n=normalize(vNor);float d=abs(dot(n,uLight));vec3 base=vCol*uTint;vec3 c=base*(0.42+0.7*d);c=mix(c,base,uEmis);
+float dist=length(vW-uCam);float f=clamp((dist-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);o=vec4(mix(c,uFog,f*f*(3.0-2.0*f)),1.0);}`;
+let prog,U={},MESH={},VPm=null;
+const FOG=[.72,.81,.9],FOV=55*DEG,LIGHT=norm([.45,.8,.25]);
+function shader(t,src){const s=gl.createShader(t);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s}
+function mesh(data,idx){const vao=gl.createVertexArray();gl.bindVertexArray(vao);const vb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,vb);
+  gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);for(let i=0;i<3;i++){gl.enableVertexAttribArray(i);gl.vertexAttribPointer(i,3,gl.FLOAT,false,36,i*12)}
+  let count=data.length/9;if(idx){const ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,idx,gl.STATIC_DRAW);count=idx.length}
+  gl.bindVertexArray(null);return{vao,count,idx:!!idx}}
+function TB(){const a=[];return{tri(p1,p2,p3,c){const n=norm(cross(sub(p2,p1),sub(p3,p1)));for(const p of[p1,p2,p3])a.push(p[0],p[1],p[2],n[0],n[1],n[2],c[0],c[1],c[2])},
+  quad(p1,p2,p3,p4,c){this.tri(p1,p2,p3,c);this.tri(p1,p3,p4,c)},done(){return mesh(new Float32Array(a))}}}
+function sphereMesh(c,seg,ring,colFn){const a=[],P=(t,p)=>[Math.sin(t)*Math.cos(p),Math.cos(t),Math.sin(t)*Math.sin(p)];
+  for(let i=0;i<ring;i++){const t0=i/ring*Math.PI,t1=(i+1)/ring*Math.PI;for(let j=0;j<seg;j++){const p0=j/seg*2*Math.PI,p1=(j+1)/seg*2*Math.PI;
+    const v=[P(t0,p0),P(t1,p0),P(t1,p1),P(t0,p1)];for(const k of[0,1,2,0,2,3]){const q=v[k],col=colFn?colFn(q):c;a.push(q[0],q[1],q[2],q[0],q[1],q[2],col[0],col[1],col[2])}}}
+  return mesh(new Float32Array(a))}
+function coneMesh(c,seg=16){const b=TB();for(let j=0;j<seg;j++){const a0=j/seg*2*Math.PI,a1=(j+1)/seg*2*Math.PI,p0=[Math.cos(a0),0,Math.sin(a0)],p1=[Math.cos(a1),0,Math.sin(a1)];
+  b.tri(p0,[0,1,0],p1,c);b.tri(p0,p1,[0,0,0],scl(c,.6))}return b.done()}
+function boxMesh(c){const b=TB(),P=[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]];
+  for(const f of[[0,1,2,3],[5,4,7,6],[4,0,3,7],[1,5,6,2],[3,2,6,7],[4,5,1,0]])b.quad(P[f[0]],P[f[1]],P[f[2]],P[f[3]],c);return b.done()}
+function jetMesh(body,wing){const b=TB(),N=[0,0,8.5],Tl=[0,0,-7],L=[-1.1,0,1],R=[1.1,0,1],Up=[0,1,.5],Dn=[0,-.9,.5],can=[.12,.18,.26];
+  b.tri(N,Up,R,body);b.tri(N,R,Dn,body);b.tri(N,Dn,L,body);b.tri(N,L,Up,body);
+  b.tri(Tl,R,Up,body);b.tri(Tl,Dn,R,body);b.tri(Tl,L,Dn,body);b.tri(Tl,Up,L,body);
+  b.tri([0,1.05,3.6],[-.55,.6,1.4],[.55,.6,1.4],can);b.tri([-.55,.6,1.4],[0,1.15,.3],[.55,.6,1.4],can);
+  b.tri([0,0,3],[-7.5,-.1,-3.6],[0,0,-4],wing);b.tri([0,0,3],[0,0,-4],[7.5,-.1,-3.6],wing);
+  b.tri([0,.6,-3.4],[0,4.3,-7.3],[0,.4,-7],wing);
+  b.tri([0,0,-5],[-3.2,0,-7.6],[0,0,-7],wing);b.tri([0,0,-5],[0,0,-7],[3.2,0,-7.6],wing);return b.done()}
+function buildTerrainMesh(){const n1=T.n1,N=T.N,data=new Float32Array(n1*n1*9),idx=new Uint32Array(N*N*6);
+  for(let j=0;j<n1;j++)for(let i=0;i<n1;i++){const x=-T.half+i*T.cell,z=-T.half+j*T.cell,h=T.h[j*n1+i];
+    const hl=gAt(Math.max(0,i-1),j),hr=gAt(Math.min(N,i+1),j),hd=gAt(i,Math.max(0,j-1)),hu=gAt(i,Math.min(N,j+1));
+    const nr=norm([hl-hr,2*T.cell,hd-hu]),c=terrainColor(h,x,z),o=(j*n1+i)*9;
+    data.set([x,Math.max(0,h),z,nr[0],nr[1],nr[2],c[0],c[1],c[2]],o)}
+  let k=0;for(let j=0;j<N;j++)for(let i=0;i<N;i++){const a=j*n1+i,b=a+1,c=a+n1,d=c+1;idx[k++]=a;idx[k++]=c;idx[k++]=b;idx[k++]=b;idx[k++]=c;idx[k++]=d}
+  return mesh(data,idx)}
+function initGL(){
+  prog=gl.createProgram();gl.attachShader(prog,shader(gl.VERTEX_SHADER,VS));gl.attachShader(prog,shader(gl.FRAGMENT_SHADER,FS));
+  ['aPos','aNor','aCol'].forEach((n,i)=>gl.bindAttribLocation(prog,i,n));gl.linkProgram(prog);
+  if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog));
+  for(const n of['uVP','uM','uLight','uFog','uFogR','uCam','uTint','uEmis'])U[n]=gl.getUniformLocation(prog,n);
+  gl.enable(gl.DEPTH_TEST);
+  buildHeights();
+  MESH.terrain=buildTerrainMesh();
+  MESH.sky=sphereMesh(null,24,12,q=>{const t=clamp(q[1]*1.7,0,1);return q[1]<0?[.62,.68,.72]:[lerp(FOG[0],.27,t),lerp(FOG[1],.47,t),lerp(FOG[2],.78,t)]});
+  MESH.sphere=sphereMesh([1,1,1],16,10);MESH.cone=coneMesh([1,1,1]);MESH.box=boxMesh([1,1,1]);
+  MESH.jet=jetMesh([.42,.45,.5],[.36,.39,.44]);MESH.tri2=tri2Mesh();
+}
+let DPR=1;
+function resize(){DPR=Math.min(window.devicePixelRatio||1,1.5);const w=Math.round(glc.clientWidth*DPR),h=Math.round(glc.clientHeight*DPR);
+  if(glc.width!==w||glc.height!==h){glc.width=w;glc.height=h;hud.width=w;hud.height=h}}
+function draw(m,M,tint=[1,1,1],emis=0){gl.uniformMatrix4fv(U.uM,false,M);gl.uniform3fv(U.uTint,tint);gl.uniform1f(U.uEmis,emis);
+  gl.bindVertexArray(m.vao);if(m.idx)gl.drawElements(gl.TRIANGLES,m.count,gl.UNSIGNED_INT,0);else gl.drawArrays(gl.TRIANGLES,0,m.count)}
+function project(p){if(!VPm)return null;const m=VPm,w=m[3]*p[0]+m[7]*p[1]+m[11]*p[2]+m[15];if(w<=.1)return null;
+  const x=(m[0]*p[0]+m[4]*p[1]+m[8]*p[2]+m[12])/w,y=(m[1]*p[0]+m[5]*p[1]+m[9]*p[2]+m[13])/w;
+  return[(x*.5+.5)*hud.clientWidth,(1-(y*.5+.5))*hud.clientHeight]}
+
+/* ================= config & input ================= */
+const ACTIONS=[['fire','ירי טיל אוויר-אוויר','Space'],['bomb','שחרור פצצה','B'],['flare','נורים','F'],['ecm','ל"א – לוחמה אלקטרונית','E'],
+  ['radio','מענה בקשר ("קיבלתי")','R'],['ack','אישור התראת חריגה','Q'],['sys1','טיפול בתקלת מנוע','1'],['sys2','טיפול בתקלת הידראוליקה','2'],
+  ['sys3','טיפול בתקלת דלק','3'],['sys4','טיפול בתקלת חשמל','4'],['pause','השהיה','Esc']];
+const KEYMAP={fire:['Space'],bomb:['KeyB'],flare:['KeyF'],ecm:['KeyE'],radio:['KeyR'],ack:['KeyQ'],sys1:['Digit1'],sys2:['Digit2'],sys3:['Digit3'],sys4:['Digit4'],pause:['Escape','KeyP']};
+const AXN={roll:'גלגול (סטיק ימינה/שמאלה)',pitch:'עלרוד (סטיק קדימה/אחורה)',throttle:'מצערת'};
+function defCfg(){return{axes:{roll:null,pitch:null,throttle:null},inv:{roll:false,pitch:false,throttle:true},dead:.05,sens:1,
+  binds:Object.fromEntries(ACTIONS.map(a=>[a[0],null])),auto:true}}
+let CFG=defCfg();
+try{const s=localStorage.getItem('yarpaB_cfg');if(s){const o=JSON.parse(s);CFG=Object.assign(defCfg(),o);CFG.binds=Object.assign(defCfg().binds,o.binds||{})}}catch(e){}
+function saveCfg(){try{localStorage.setItem('yarpaB_cfg',JSON.stringify(CFG))}catch(e){}}
+const pads=()=>{try{return navigator.getGamepads?[...navigator.getGamepads()]:[]}catch(e){return[]}};
+function getPad(b){if(!b)return null;const ps=pads();const p=ps[b.index];if(p&&p.id===b.id)return p;for(const q of ps)if(q&&q.id===b.id)return q;return null}
+function axisRaw(name){const b=CFG.axes[name],p=getPad(b);if(!p)return null;if(b.btn!=null){const bt=p.buttons[b.btn];return bt?bt.value*2-1:null}if(p.axes[b.axis]===undefined)return null;return p.axes[b.axis]}
+function axisVal(name){let v=axisRaw(name);if(v==null)return null;if(CFG.inv[name])v=-v;const d=CFG.dead;if(Math.abs(v)<d)return 0;return Math.sign(v)*(Math.abs(v)-d)/(1-d)}
+function thrVal(){const v=axisRaw('throttle');if(v==null)return null;return clamp(CFG.inv.throttle?(1-v)/2:(v+1)/2,0,1)}
+function bindActive(b){const p=getPad(b);if(!p)return false;if(b.type==='b'){const bt=p.buttons[b.n];return!!bt&&(bt.pressed||bt.value>.5)}
+  const a=p.axes[b.n];return a!==undefined&&Math.abs(a-b.v)<.13}
+function bindName(b){if(!b)return'—';return b.type==='b'?`כפתור ${b.n+1}`:`ציר ${b.n} (${b.v})`}
+function hint(a){const k=ACTIONS.find(x=>x[0]===a);const b=CFG.binds[a];return(k?k[2]:'')+(b?' / '+(b.type==='b'?'כפ\' '+(b.n+1):'HAT'):'')}
+function autoConfig(p){if(!CFG.auto||CFG.axes.roll)return;const ref={id:p.id,index:p.index};
+  CFG.axes.roll={...ref,axis:0};CFG.axes.pitch={...ref,axis:1};if(p.axes.length>2&&p.mapping!=='standard')CFG.axes.throttle={...ref,axis:2};
+  ['fire','bomb','flare','ecm','radio','ack','sys1','sys2','sys3','sys4'].forEach((a,i)=>{if(i<p.buttons.length)CFG.binds[a]={...ref,type:'b',n:i}});
+  CFG.auto=false;saveCfg();buildPanel();updPadStatus()}
+addEventListener('gamepadconnected',e=>{autoConfig(e.gamepad);updPadStatus()});
+addEventListener('gamepaddisconnected',updPadStatus);
+const keys=new Set();
+const kbBuf=new Set();
+addEventListener('keydown',e=>{keys.add(e.code);if(!e.repeat)kbBuf.add(e.code);if(/^(Space|Arrow)/.test(e.code)&&e.target===document.body)e.preventDefault()});
+addEventListener('keyup',e=>keys.delete(e.code));addEventListener('blur',()=>keys.clear());
+const IN={roll:0,pitch:0,throttle:.55,kbR:0,kbP:0,kbT:.55,act:{},just:new Set(),lastT:null,src:'kb'};
+function poll(dt){
+  const kR=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0),kP=(keys.has('ArrowDown')?1:0)-(keys.has('ArrowUp')?1:0);
+  IN.kbR=approach(IN.kbR,kR,dt*3.2);IN.kbP=approach(IN.kbP,kP,dt*2.6);
+  if(keys.has('KeyX')){IN.kbT=.5;IN.src='kb'}
+  if(keys.has('KeyW')||keys.has('ShiftLeft')){IN.kbT=clamp(IN.kbT+dt*.45,0,1);IN.src='kb'}
+  if(keys.has('KeyS')||keys.has('ControlLeft')){IN.kbT=clamp(IN.kbT-dt*.45,0,1);IN.src='kb'}
+  const pr=axisVal('roll'),pp=axisVal('pitch'),pt=thrVal();
+  IN.roll=Math.abs(IN.kbR)>.02?IN.kbR:(pr??0);IN.pitch=Math.abs(IN.kbP)>.02?IN.kbP:(pp??0);
+  if(pt!=null&&(IN.lastT==null||Math.abs(pt-IN.lastT)>.02)){IN.src='pad';IN.lastT=pt}
+  if(IN.src==='pad'&&pt!=null){IN.throttle=pt;IN.kbT=pt}else IN.throttle=IN.kbT;
+  IN.just.clear();for(const[a]of ACTIONS){const kb=(KEYMAP[a]||[]).some(k=>keys.has(k)),buf=(KEYMAP[a]||[]).some(k=>kbBuf.has(k)),on=kb||bindActive(CFG.binds[a]);if((on&&!IN.act[a])||(buf&&!kb))IN.just.add(a);IN.act[a]=on}
+  kbBuf.clear();
+}
+
+/* ================= audio ================= */
+let AC=null,ENG=null;
+function audioInit(){try{if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume()}catch(e){}}
+function beep(f,d,type='square',vol=.05,when=0){if(!AC)return;const t=AC.currentTime+when,o=AC.createOscillator(),g=AC.createGain();
+  o.type=type;o.frequency.value=f;g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(AC.destination);o.start(t);o.stop(t+d+.03)}
+const SND={caution(){beep(760,.14,'square',.045);beep(560,.2,'square',.045,.16)},sys(){for(let i=0;i<3;i++)beep(1000,.09,'square',.05,i*.13)},
+  ok(){beep(660,.1,'sine',.09);beep(990,.16,'sine',.09,.1)},err(){beep(150,.3,'sawtooth',.06)},click(){beep(1500,.03,'square',.03)},
+  radio(){beep(1900,.04,'square',.025);beep(1300,.05,'square',.025,.05)},msl(){beep(1250,.07,'square',.05)},tone(){beep(420,.12,'triangle',.05)},
+  boom(){if(!AC)return;const b=AC.createBuffer(1,AC.sampleRate*.7,AC.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);
+    const s=AC.createBufferSource(),g=AC.createGain(),f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=600;g.gain.value=.25;s.buffer=b;s.connect(f).connect(g).connect(AC.destination);s.start()}};
+function engineOn(){if(!AC||ENG)return;const g=AC.createGain(),f=AC.createBiquadFilter(),o1=AC.createOscillator(),o2=AC.createOscillator();
+  f.type='lowpass';f.frequency.value=320;g.gain.value=.022;o1.type='sawtooth';o2.type='sawtooth';o1.frequency.value=48;o2.frequency.value=48.7;
+  o1.connect(f);o2.connect(f);f.connect(g).connect(AC.destination);o1.start();o2.start();ENG={g,f,o1,o2}}
+function engineSet(t){if(!ENG)return;const fr=42+t*45;ENG.o1.frequency.value=fr;ENG.o2.frequency.value=fr*1.013;ENG.f.frequency.value=220+t*380}
+function engineOff(){if(!ENG)return;try{ENG.o1.stop();ENG.o2.stop()}catch(e){}ENG=null}
+function say(txt){if(!$('#optVoice').checked||!window.speechSynthesis)return;try{const v=speechSynthesis.getVoices().find(v=>v.lang&&v.lang.toLowerCase().startsWith('he'));
+  if(!v)return;const u=new SpeechSynthesisUtterance(txt);u.voice=v;u.lang=v.lang;u.rate=1.12;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
+
+/* ================= aircraft ================= */
+function makePlane(p,hdg,v=200){const f=[Math.sin(hdg),0,-Math.cos(hdg)],u=[0,1,0];return{p:p.slice(),f,u,r:cross(f,u),v,thr:.55}}
+function ortho(P){P.f=norm(P.f);P.r=norm(cross(P.f,P.u));P.u=norm(cross(P.r,P.f))}
+const rollOf=P=>Math.atan2(-P.r[1],P.u[1]), pitchOf=P=>Math.asin(clamp(P.f[1],-1,1));
+function fly(P,dt){
+  const sh=x=>.35*x+.65*x*x*x,vf=clamp(P.v/140,.35,1),s=CFG.sens;
+  [P.u,P.r]=rotPair(P.u,P.r,sh(IN.roll)*2.1*vf*s*dt);
+  [P.f,P.u]=rotPair(P.f,P.u,sh(IN.pitch)*.72*vf*s*dt);
+  const roll=rollOf(P),turn=9.81*Math.sin(roll)*1.55/Math.max(P.v,60)*Math.cos(pitchOf(P));
+  P.f=rotY(P.f,-turn*dt);P.u=rotY(P.u,-turn*dt);
+  if(P.v<72){const k=(72-P.v)/72*.7*dt;[P.f,P.u]=rotPair(P.f,P.u,-k)}
+  ortho(P);
+  P.thr=lerp(P.thr,IN.throttle,1-Math.exp(-dt*2.2));
+  const acc=3+P.thr*29-.00049*P.v*P.v-9.81*P.f[1];
+  P.v=clamp(P.v+acc*dt,45,330);P.p=add(P.p,scl(P.f,P.v*dt));
+}
+
+
+/* Yarpa A flight model: throttle -10..+10 sets the desired speed difference vs. the enemy (x10 kt, matching the ±100 speed meter).
+   0 = match the enemy's speed. The aircraft converges to that target smoothly: limited acceleration, engine spool lag,
+   and a gentle exponential approach so the speed-difference meter settles realistically instead of snapping. */
+const A1T={dead:.6,ktPerUnit:10,accMax:4.5,decMax:5.5,spoolUp:1.8,spoolDown:.9,vMin:110,vMax:330};
+function a1ThrCmd(){let c=(IN.throttle*2-1)*10;if(Math.abs(c)<A1T.dead)c=0;return Math.round(c*10)/10}
+function flyA1(P,dt){
+  const sh=x=>.35*x+.65*x*x*x,vf=clamp(P.v/140,.35,1),s=CFG.sens;
+  [P.u,P.r]=rotPair(P.u,P.r,sh(IN.roll)*2.1*vf*s*dt);
+  [P.f,P.u]=rotPair(P.f,P.u,sh(IN.pitch)*.72*vf*s*dt);
+  const roll=rollOf(P),turn=9.81*Math.sin(roll)*1.55/Math.max(P.v,60)*Math.cos(pitchOf(P));
+  P.f=rotY(P.f,-turn*dt);P.u=rotY(P.u,-turn*dt);ortho(P);
+  A1.thrCmd=a1ThrCmd();
+  // throttle commands acceleration: 0 = hold current speed; ±10 = full accel/decel. Relative speed limited to ±100 kt.
+  const c=A1.thrCmd/10,rel=(P.v-A1.en.v)*KT;let want=c>=0?c*A1T.accMax:c*A1T.decMax;
+  if(want>0)want*=clamp((100-rel)/15,0,1);if(want<0)want*=clamp((rel+100)/15,0,1);
+  // engine lag: thrust builds slower than it decays (like a real turbofan); at throttle 0 the decay brings acceleration to exactly 0 = speed held
+  const tc=Math.abs(want)>Math.abs(A1.acc)&&Math.sign(want||1)===Math.sign(A1.acc||want||1)?A1T.spoolUp:A1T.spoolDown;
+  A1.acc+=(want-A1.acc)*(1-Math.exp(-dt/tc));if(want===0&&Math.abs(A1.acc)<.02)A1.acc=0;
+  A1.thrAct=A1.thrCmd;P.thr=.5+A1.thrCmd/20;
+  P.v=clamp(P.v+A1.acc*dt,A1T.vMin,A1T.vMax);const lim=100/KT;if(P.v>A1.en.v+lim){P.v=A1.en.v+lim;if(A1.acc>0)A1.acc=0}if(P.v<A1.en.v-lim){P.v=A1.en.v-lim;if(A1.acc<0)A1.acc=0}P.p=add(P.p,scl(P.f,P.v*dt))}
+
+/* ================= game state, scoring, alerts ================= */
+const game={mode:'menu',flow:null,paused:false,P:null,t:0,pen:0,bonus:0,log:[],res:{},diff:'normal',practice:false};
+const DIFF={easy:{k:1.45,brief:30},normal:{k:1,brief:15},hard:{k:.75,brief:10}};
+function pen(p,txt){game.pen+=p;game.log.push({t:game.t,txt,p:-p})}
+function good(txt,b=0){game.bonus+=b;game.log.push({t:game.t,txt,p:b})}
+let bannerT=null;
+function banner(txt,ms=2200,color='#fff'){const b=$('#banner');b.textContent=txt;b.style.color=color;b.classList.add('show');clearTimeout(bannerT);bannerT=setTimeout(()=>b.classList.remove('show'),ms)}
+function flash(){const f=$('#flash');f.style.transition='none';f.style.opacity=.45;requestAnimationFrame(()=>{f.style.transition='opacity .8s';f.style.opacity=0})}
+const LIGHTS=[{k:'ALT',t:'גובה',kind:'lim',act:'ack'},{k:'SPD',t:'מהירות',kind:'lim',act:'ack'},{k:'NAV',t:'נתיב',kind:'lim',act:'ack'},
+  {k:'SAM',t:'איום קרקע',kind:'thr',act:'ecm'},{k:'AIR',t:'איום אוויר',kind:'thr',act:'fire'},
+  {k:'ENG',t:'מנוע',kind:'sys',act:'sys1'},{k:'HYD',t:'הידראוליקה',kind:'sys',act:'sys2'},{k:'FUEL',t:'דלק',kind:'sys',act:'sys3'},
+  {k:'ELEC',t:'חשמל',kind:'sys',act:'sys4'},{k:'MSL',t:'טיל!',kind:'thr',act:'flare'}];
+const AL={};
+function resetAlerts(){for(const l of LIGHTS)AL[l.k]={state:'off',t0:0}}
+function buildPanel(){const L=$('#lights');L.innerHTML='';for(const l of LIGHTS){const d=document.createElement('div');d.className='light';
+  d.innerHTML=`${l.t}<small>${esc(hint(l.act))}</small>`;L.appendChild(d);l.el=d}}
+function limCheck(k,viol,dt,rate){const a=AL[k],l=LIGHTS.find(x=>x.k===k);
+  if(viol){if(a.state!=='viol'){if(a.state==='off'){SND.caution();game.log.push({t:game.t,txt:`חריגת ${l.t}`,p:0})}a.state='viol';a.t0=game.t}
+    game.pen+=rate*dt;game.res.viol[k]=(game.res.viol[k]||0)+dt}
+  else if(a.state==='viol'){a.state='pend';a.t0=game.t}
+  if(a.state==='pend'&&game.t-a.t0>9){a.state='off';pen(2,`התראת ${l.t} לא אושרה`)}}
+function doAck(){const lim=LIGHTS.filter(l=>l.kind==='lim'),pend=lim.filter(l=>AL[l.k].state==='pend'),viol=lim.filter(l=>AL[l.k].state==='viol');
+  if(pend.length){for(const l of pend){const d=game.t-AL[l.k].t0;AL[l.k].state='off';if(d>4)pen(1,`אישור מאוחר – ${l.t} (${d.toFixed(1)} שנ')`)}SND.click()}
+  else if(viol.length){pen(1,'אישור התראה לפני תיקון החריגה');SND.err()}else{pen(.5,'לחיצת אישור מיותרת');SND.err()}}
+function sysFail(){const o=LIGHTS.filter(l=>l.kind==='sys'&&AL[l.k].state==='off');if(!o.length)return;const l=pick(o);AL[l.k]={state:'sys',t0:game.t};SND.sys();
+  game.log.push({t:game.t,txt:`תקלת ${l.t}`,p:0})}
+function sysPress(n){const l=LIGHTS.find(x=>x.act==='sys'+n),a=AL[l.k];
+  if(a.state==='sys'){const d=game.t-a.t0;a.state='off';if(d>3)pen(1,`טיפול איטי בתקלת ${l.t} (${d.toFixed(1)} שנ')`);else good(`טופלה תקלת ${l.t} (${d.toFixed(1)} שנ')`);SND.ok()}
+  else{pen(2,`לחיצה על "${l.t}" בלי תקלה פעילה`);SND.err()}}
+function sysTick(){for(const l of LIGHTS)if(l.kind==='sys'&&AL[l.k].state==='sys'&&game.t-AL[l.k].t0>8){AL[l.k].state='off';pen(3,`תקלת ${l.t} לא טופלה`)}}
+let panelT=0;
+function updPanel(){
+  for(const l of LIGHTS){const s=AL[l.k]?AL[l.k].state:'off';const c='light'+(s==='off'?'':' '+s);if(l.el.className!==c)l.el.className=c}
+  const st=$('#stores'),mi=$('#mission');
+  if(game.mode==='s2'){const M=S2,S=M.stores;
+    st.innerHTML=`<div class="kv">טילים <b class="${S.msl?'':'low'}">${S.msl}</b></div><div class="kv">פצצות <b class="${S.bomb?'':'low'}">${S.bomb}</b></div>
+      <div class="kv">נורים <b class="${S.flare?'':'low'}">${S.flare}</b></div><div class="kv">ל"א <b class="${M.jam>0?'on':S.ecm?'':'low'}">${M.jam>0?'פעיל '+Math.ceil(M.jam):S.ecm}</b></div>`;
+    mi.innerHTML=`<div class="kv">זמן <b>${fmtT(M.tlimit-M.t)}</b></div><div class="kv">גובה מותר (רגל) <b>${M.lim.agl[0]}–${M.lim.agl[1]}</b></div>
+      <div class="kv">מהירות מותרת <b>${M.lim.spd[0]}–${M.lim.spd[1]}</b></div><div class="kv">מטרות שהושמדו <b>${M.targets.filter(t=>t.dead&&t.pri).length}/${M.targets.filter(t=>t.pri).length}</b></div>`}
+  else if(game.mode==='s1'){const C=S1L[S1.lvl];
+    st.innerHTML=`<div class="kv">רמה <b>${S1.lvl+1}/4</b></div><div class="kv">הצלחות <b>${S1.succ}/3</b></div><div class="kv">איפוסים <b>${S1.fails}</b></div>`;
+    mi.innerHTML=`<div class="kv">זמן ברמה <b>${fmtT(S1.lvT)}</b></div><div class="kv">טווח יעד <b>${S1.target}±${C.band}</b></div><div class="kv">החזקה נדרשת <b>${C.hold}s</b></div><div style="font-size:12px;color:var(--dim);margin-top:4px">${C.name}</div>`}
+}
+function pushRadio(txt,cls){const R=$('#radio');const d=document.createElement('div');d.className='msg new '+(cls||'');d.textContent=txt;R.prepend(d);while(R.children.length>3)R.lastChild.remove()}
+
+/* ================= stage 1: formation ================= */
+const S1L=[
+  {name:'רמה 1 – טיסה ישרה, שינויי מהירות',spd:[26,.05],turn:null,climb:null,band:90,ang:6,hold:8,sys:false},
+  {name:'רמה 2 – פניות עדינות',spd:[22,.06],turn:[.07,.045],climb:null,band:75,ang:5.5,hold:10,sys:false},
+  {name:'רמה 3 – פניות ושינויי גובה',spd:[30,.07],turn:[.1,.05],climb:[16,.045],band:65,ang:5,hold:10,sys:true},
+  {name:'רמה 4 – תמרונים משולבים',spd:[40,.085],turn:[.14,.065],climb:[26,.06],band:55,ang:4.5,hold:12,sys:true}];
+let S1=null;
+function startS1(){resetAlerts();game.t=0;game.pen=0;game.bonus=0;game.log=[];game.res={viol:{}};
+  S1={lvl:0,succ:0,hold:0,out:0,fails:0,lvT:0,onT:0,totT:0,lvTimes:[],target:300,sysT:rr(14,22),lead:null,dist:0,ang:0,ok:false};
+  $('#cs').textContent='';$('#radio').innerHTML='';spawnS1();show(null);game.mode='s1';game.paused=false;engineOn();banner(S1L[0].name,2800)}
+function spawnS1(){const hdg=rr(0,2*Math.PI),p=[rr(-5000,5000),2500,rr(-5000,5000)];
+  S1.lead={p,hdg,v:190,t:rr(0,50),f:[Math.sin(hdg),0,-Math.cos(hdg)],u:[0,1,0],r:[1,0,0],hr:0};
+  game.P=makePlane(sub(p,scl(S1.lead.f,S1.target)),hdg,190);game.P.thr=.51;if(IN.src==='kb')IN.kbT=.51;S1.hold=0}
+function updLead(dt){const L=S1.lead,C=S1L[S1.lvl],t=(L.t+=dt),w=2*Math.PI;
+  L.v=190+C.spd[0]*Math.sin(C.spd[1]*w*t)+.35*C.spd[0]*Math.sin(C.spd[1]*w*2.3*t+1.3);
+  let hr=C.turn?C.turn[0]*(Math.sin(C.turn[1]*w*t+.7)+.45*Math.sin(C.turn[1]*w*2.7*t)):0;
+  if(Math.hypot(L.p[0],L.p[2])>11000){const toC=Math.atan2(-L.p[0],L.p[2]);hr+=clamp(wrapPi(toC-L.hdg),-1,1)*.06}
+  L.hdg+=hr*dt;let vy=C.climb?C.climb[0]*Math.sin(C.climb[1]*w*t):0;
+  if(L.p[1]>3300)vy-=8;if(L.p[1]<1900)vy+=8;if(L.p[1]<groundAt(L.p[0],L.p[2])+600)vy=Math.max(vy,18);
+  const vh=Math.sqrt(Math.max(1,L.v*L.v-vy*vy));L.f=norm([Math.sin(L.hdg)*vh,vy,-Math.cos(L.hdg)*vh]);L.p=add(L.p,scl(L.f,L.v*dt));
+  const fr=frameFromDir(L.f);[L.u,L.r]=rotPair(fr.u,fr.r,Math.atan(L.v*hr/9.81))}
+function updS1(dt){const P=game.P,C=S1L[S1.lvl];game.t+=dt;S1.lvT+=dt;fly(P,dt);updLead(dt);
+  if(P.p[1]<groundAt(P.p[0],P.p[2])+3){SND.boom();flash();S1.fails++;banner('התרסקות – איפוס',2500,'#ff8a80');spawnS1();return}
+  const rel=sub(S1.lead.p,P.p),dist=len(rel),ang=Math.acos(clamp(dot(norm(rel),P.f),-1,1))/DEG;
+  S1.dist=dist;S1.ang=ang;S1.ok=Math.abs(dist-S1.target)<C.band&&ang<C.ang;S1.totT+=dt;if(S1.ok)S1.onT+=dt;
+  if(S1.ok){S1.out=0;S1.hold+=dt}else{S1.out+=dt;if(S1.out>.35)S1.hold=0}
+  if(S1.hold>=C.hold){S1.succ++;S1.hold=0;SND.ok();
+    if(S1.succ>=3){S1.lvTimes.push(S1.lvT);S1.lvl++;S1.succ=0;S1.lvT=0;
+      if(S1.lvl>=4){finishS1();return}banner('רמה הושלמה! '+S1L[S1.lvl].name,3000,'#8dffad');spawnS1();resetAlerts()}
+    else banner(`הצלחה ${S1.succ}/3`,1500,'#8dffad')}
+  if(dist>2500){S1.fails++;banner('איבדת את המוביל – איפוס',2500,'#ffb000');spawnS1()}
+  else if(dist<35){S1.fails++;SND.err();flash();banner('התנגשות במוביל – איפוס',2500,'#ff8a80');spawnS1()}
+  if(C.sys){S1.sysT-=dt;if(S1.sysT<=0){S1.sysT=rr(14,26)*DIFF[game.diff].k;sysFail()}sysTick()}
+  handleCommonActions(true)}
+function finishS1(){engineOff();game.res.s1={lvTimes:S1.lvTimes.slice(),onPct:S1.totT?S1.onT/S1.totT*100:0,fails:S1.fails,pen:game.pen,log:game.log.slice()};
+  if(game.flow==='full'){banner('שלב א\' הושלם',2000,'#8dffad');game.mode='wait';setTimeout(showBrief,1600)}else showDebrief()}
+
+/* ================= stage 2: mission ================= */
+let S2=null;
+const CALLSIGNS=['נשר 3','עקרב 2','ברק 4','פנתר 1','עיט 2','שחף 3'];
+function genMission(){
+  const route=[],n=7;let z=rr(-6000,6000);
+  for(let i=0;i<n;i++){const x=-13000+i*(27000/(n-1))+rr(-800,800);if(i>0)z=clamp(z+(i%2?1:-1)*rr(3500,8000)*(Math.random()<.8?1:-.4),-15000,15000);route.push([x,0,z])}
+  const segs=[];let total=0;for(let i=0;i<n-1;i++){const L=d2(route[i],route[i+1]);segs.push(L);total+=L}
+  const at=f=>{let d=f*total;for(let i=0;i<segs.length;i++){if(d<=segs[i]){const t=d/segs[i];return{p:[lerp(route[i][0],route[i+1][0],t),0,lerp(route[i][2],route[i+1][2],t)],i}}d-=segs[i]}return{p:route[n-1].slice(),i:segs.length-1}};
+  const lateral=(f,off)=>{const a=at(f),A=route[a.i],B=route[a.i+1],dx=B[0]-A[0],dz=B[2]-A[2],l=Math.hypot(dx,dz);return[a.p[0]-dz/l*off,0,a.p[2]+dx/l*off]};
+  const targets=[],fr=[.14,.26,.38,.5,.62,.74,.86].sort(()=>Math.random()-.5).slice(0,6).sort((a,b)=>a-b);
+  const pri=[true,true,true,false,false,false].sort(()=>Math.random()-.5);
+  fr.forEach((f,i)=>{let p;for(let k=0;k<12;k++){p=lateral(clamp(f+rr(-.05,.05),.06,.94),rr(150,700)*(Math.random()<.5?1:-1));
+    if(route.every(w=>d2(w,p)>1400)&&targets.every(t=>d2(t.p,p)>1800))break}p[1]=groundAt(p[0],p[2]);targets.push({p,pri:pri[i],dead:false})});
+  const sams=[];[.22,.48,.78].forEach(f=>{const p=lateral(f+rr(-.05,.05),rr(1400,2300)*(Math.random()<.5?1:-1));p[1]=groundAt(p[0],p[2]);sams.push({p,r:3300,exp:0,cd:0})});
+  return{route,total,targets,sams}}
+function showBrief(){
+  const k=DIFF[game.diff=$('#optDiff').value];game.practice=$('#optPractice').checked;
+  const m=genMission(),cs=pick(CALLSIGNS);
+  S2={...m,cs,others:CALLSIGNS.filter(c=>c!==cs),briefT:k.brief,lim:{agl:[500,1500],spd:[300,450]}};
+  drawBriefMap();
+  $('#binfo').innerHTML=`<h4>נתוני משימה</h4><div class="kv">אות קריאה <b style="color:var(--amber)">${cs}</b></div>
+   <div class="kv">גובה מעל הקרקע <b>${S2.lim.agl[0]}–${S2.lim.agl[1]} ft</b></div><div class="kv">מהירות <b>${S2.lim.spd[0]}–${S2.lim.spd[1]} kt</b></div>
+   <div class="kv">אורך מסלול <b>${(m.total/1000).toFixed(1)} km</b></div><p class="note" style="margin:6px 0 0">זכור: אילו מטרות בעדיפות, היכן האיומים, ואת כיווני הקטעים.</p>`;
+  const lg=$('#blegs');lg.innerHTML='<tr><th>קטע</th><th>כיוון</th><th>מרחק</th></tr>'+m.route.slice(0,-1).map((p,i)=>{const q=m.route[i+1];
+    return`<tr><td>${i}→${i+1}</td><td>${String(Math.round(hdgOf([q[0]-p[0],0,q[2]-p[2]]))).padStart(3,'0')}°</td><td>${(d2(p,q)/1000).toFixed(1)} km</td></tr>`}).join('');
+  $('#blegend').innerHTML=`<div class="leg">${svgI('pri')} מטרה בעדיפות – להשמיד</div><div class="leg">${svgI('dec')} מטרת דמה – אסור לפגוע</div>
+   <div class="leg">${svgI('sam')} סוללת טילים + טווח</div><div class="leg">${svgI('wp')} נקודת ציון</div>`;
+  game.mode='brief';show('#brief');
+}
+function svgI(t){const s='<svg width="26" height="26" viewBox="-13 -13 26 26">';
+  if(t==='pri')return s+'<circle r="5" fill="#ff3b30"/><circle r="10" fill="none" stroke="#ff3b30" stroke-width="2"/></svg>';
+  if(t==='dec')return s+'<circle r="5" fill="#4aa3ff"/></svg>';
+  if(t==='sam')return s+'<path d="M0,-7 L7,6 L-7,6Z" fill="#ffd400" stroke="#000"/><circle r="11" fill="none" stroke="#ffd400" stroke-dasharray="3 2"/></svg>';
+  return s+'<circle r="7" fill="#fff" stroke="#000" stroke-width="1.5"/></svg>'}
+function drawBriefMap(){const m=S2,cv=$('#bmap'),c=cv.getContext('2d'),W=cv.width;
+  let xs=[],zs=[];for(const p of[...m.route,...m.targets.map(t=>t.p),...m.sams.map(s=>s.p)]){xs.push(p[0]);zs.push(p[2])}
+  const x0=Math.min(...xs)-3500,x1=Math.max(...xs)+3500,z0=Math.min(...zs)-3500,z1=Math.max(...zs)+3500,size=Math.max(x1-x0,z1-z0),cx=(x0+x1)/2,cz=(z0+z1)/2;
+  const X0=cx-size/2,Z0=cz-size/2,R=300,img=c.createImageData(R,R),step=size/R;
+  for(let j=0;j<R;j++)for(let i=0;i<R;i++){const x=X0+(i+.5)*step,z=Z0+(j+.5)*step,h=rawAt(x,z),hx_=rawAt(x+step,z),hz=rawAt(x,z+step);let col;
+    if(h<=0)col=[88,140,190];else{const t=clamp(h/1300,0,1);col=t<.3?[lerp(150,205,t/.3),lerp(185,195,t/.3),lerp(120,140,t/.3)]:[lerp(205,160,(t-.3)/.7),lerp(195,140,(t-.3)/.7),lerp(140,110,(t-.3)/.7)];
+      const sh=clamp(1+((h-hx_)*.9+(h-hz)*.6)/step*1.4,.55,1.35);col=col.map(v=>v*sh);
+      if(Math.floor(h/150)!==Math.floor(hx_/150)||Math.floor(h/150)!==Math.floor(hz/150))col=col.map(v=>v*.78)}
+    const o=(j*R+i)*4;img.data[o]=col[0];img.data[o+1]=col[1];img.data[o+2]=col[2];img.data[o+3]=255}
+  const off=document.createElement('canvas');off.width=off.height=R;off.getContext('2d').putImageData(img,0,0);
+  c.imageSmoothingEnabled=true;c.drawImage(off,0,0,W,W);
+  const S=(p)=>[(p[0]-X0)/size*W,(p[2]-Z0)/size*W],k=W/size;
+  c.lineWidth=2.5;c.strokeStyle='rgba(0,0,0,.6)';
+  for(let g=Math.ceil(X0/5000)*5000;g<X0+size;g+=5000){c.beginPath();c.moveTo((g-X0)*k,0);c.lineTo((g-X0)*k,W);c.globalAlpha=.15;c.stroke();c.globalAlpha=1}
+  for(let g=Math.ceil(Z0/5000)*5000;g<Z0+size;g+=5000){c.beginPath();c.moveTo(0,(g-Z0)*k);c.lineTo(W,(g-Z0)*k);c.globalAlpha=.15;c.stroke();c.globalAlpha=1}
+  for(const s of m.sams){const[a,b]=S(s.p);c.fillStyle='rgba(255,212,0,.13)';c.beginPath();c.arc(a,b,s.r*k,0,7);c.fill();c.setLineDash([10,7]);c.strokeStyle='#ffd400';c.lineWidth=2.5;c.stroke();c.setLineDash([])}
+  c.strokeStyle='#000';c.lineWidth=7;c.beginPath();m.route.forEach((p,i)=>{const[a,b]=S(p);i?c.lineTo(a,b):c.moveTo(a,b)});c.stroke();
+  c.strokeStyle='#fff';c.lineWidth=3.5;c.setLineDash([16,9]);c.stroke();c.setLineDash([]);
+  for(const s of m.sams){const[a,b]=S(s.p);c.fillStyle='#ffd400';c.strokeStyle='#000';c.lineWidth=2;c.beginPath();c.moveTo(a,b-15);c.lineTo(a+13,b+10);c.lineTo(a-13,b+10);c.closePath();c.fill();c.stroke()}
+  for(const t of m.targets){const[a,b]=S(t.p);c.lineWidth=3;if(t.pri){c.fillStyle='#ff3b30';c.strokeStyle='#ff3b30';c.beginPath();c.arc(a,b,9,0,7);c.fill();c.beginPath();c.arc(a,b,19,0,7);c.stroke()}
+    else{c.fillStyle='#4aa3ff';c.strokeStyle='#08243f';c.beginPath();c.arc(a,b,9,0,7);c.fill();c.stroke()}}
+  c.font='bold 22px Consolas,monospace';c.textAlign='center';c.textBaseline='middle';
+  m.route.forEach((p,i)=>{const[a,b]=S(p);c.fillStyle='#fff';c.strokeStyle='#000';c.lineWidth=2.5;c.beginPath();c.arc(a,b,15,0,7);c.fill();c.stroke();c.fillStyle='#000';c.fillText(i===0?'S':i===m.route.length-1?'F':i,a,b+1)});
+  c.fillStyle='rgba(0,0,0,.55)';c.fillRect(W-70,14,56,70);c.fillStyle='#fff';c.font='bold 24px Arial';c.fillText('N',W-42,32);c.beginPath();c.moveTo(W-42,44);c.lineTo(W-52,74);c.lineTo(W-42,66);c.lineTo(W-32,74);c.closePath();c.fill();
+  const sb=5000*k;c.fillStyle='rgba(0,0,0,.55)';c.fillRect(14,W-46,sb+24,34);c.fillStyle='#fff';c.fillRect(26,W-24,sb,5);c.font='bold 14px Arial';c.fillText('5 km',26+sb/2,W-36)}
+function startS2(){if(game.mode!=='brief')return;resetAlerts();
+  if(game.flow!=='full'||!game.res.s1){game.res={viol:{}}}else game.res.viol={};
+  game.t=0;game.pen=0;game.bonus=0;game.log=[];
+  const M=S2,r0=M.route[0],r1=M.route[1],hdg=Math.atan2(r1[0]-r0[0],-(r1[2]-r0[2]));
+  game.P=makePlane([r0[0],groundAt(r0[0],r0[2])+300,r0[2]],hdg,200);game.P.thr=.6;if(IN.src==='kb')IN.kbT=.6;
+  const k=DIFF[game.diff].k;
+  Object.assign(M,{t:0,wp:1,lat:0,tlimit:M.total/185+75,stores:{msl:4,bomb:8,flare:10,ecm:5},jam:0,enemies:[],missiles:[],bombs:[],fx:[],incoming:[],
+    radioT:rr(9,14),sysT:rr(22,35)*k,enT:rr(40,60)*k,radioPending:null,graceUntil:0,crashes:0,hits:0,kills:0,lastWp:0,agl:0,kts:0});
+  $('#cs').textContent='אות קריאה: '+M.cs;$('#radio').innerHTML='';pushRadio(`${M.cs}, כאן בקרה, בהצלחה במשימה.`);
+  show(null);game.mode='s2';game.paused=false;engineOn();banner('המשימה החלה – '+M.cs,2500)}
+function routeInfo(p){const R=S2.route;let best=1e9,seg=0;for(let i=0;i<R.length-1;i++){const A=R[i],B=R[i+1],dx=B[0]-A[0],dz=B[2]-A[2],l2=dx*dx+dz*dz;
+  const t=clamp(((p[0]-A[0])*dx+(p[2]-A[2])*dz)/l2,0,1),d=Math.hypot(p[0]-A[0]-dx*t,p[2]-A[2]-dz*t);if(d<best){best=d;seg=i}}return{lat:best,seg}}
+function fx(p,size,dur,col=[1,.55,.15]){S2.fx.push({p,size,dur,t:0,col})}
+function sendRadio(){const M=S2,toMe=Math.random()<.55,cs=toMe?M.cs:pick(M.others),r=Math.random();let txt,act=null;
+  if(Math.random()<.1){pushRadio('לכל התחנות, כאן בקרה, מזג האוויר באזור תקין.');say('לכל התחנות, כאן בקרה, מזג האוויר באזור תקין');SND.radio();return}
+  if(r<.45)txt=`${cs}, כאן בקרה, דווח מצב.`;
+  else if(r<.73){const a=pick([[300,400],[320,420],[350,450],[280,380],[330,430]]);txt=`${cs}, כאן בקרה, שמור מהירות ${a[0]} עד ${a[1]} קשר.`;if(toMe)act={spd:a}}
+  else{const a=pick([[500,1500],[700,1700],[400,1200],[800,2000],[600,1400]]);txt=`${cs}, כאן בקרה, שמור גובה ${a[0]} עד ${a[1]} רגל מעל הקרקע.`;if(toMe)act={agl:a}}
+  pushRadio(txt);SND.radio();say(txt);
+  if(toMe){if(M.radioPending)pen(3,'לא נענתה קריאה בקשר');M.radioPending={t0:M.t};if(act){if(act.spd)M.lim.spd=act.spd;if(act.agl)M.lim.agl=act.agl;M.graceUntil=M.t+12}}}
+function handleCommonActions(s1){
+  if(IN.just.has('ack'))doAck();
+  for(let i=1;i<=4;i++)if(IN.just.has('sys'+i))sysPress(i);
+  if(s1)return;const M=S2,P=game.P;
+  if(IN.just.has('radio')){if(M.radioPending){const d=M.t-M.radioPending.t0;if(d>3.5)pen(1,`מענה איטי בקשר (${d.toFixed(1)} שנ')`);else good('מענה מהיר בקשר');M.radioPending=null;pushRadio(`${M.cs}: קיבלתי.`,'self');SND.click()}
+    else{pen(2,'מענה לקריאה שלא הופנתה אליך');pushRadio(`${M.cs}: קיבלתי.`,'self');SND.err()}}
+  if(IN.just.has('bomb')){if(M.stores.bomb>0){M.stores.bomb--;M.bombs.push({p:sub(P.p,scl(P.u,2)),v:scl(P.f,P.v)});SND.click()}else SND.err()}
+  if(IN.just.has('flare')){if(M.stores.flare>0){M.stores.flare--;fx(add(P.p,scl(P.f,-40)),6,1.2,[1,.95,.6]);
+      if(M.incoming.length){M.incoming=[];good('הטיל הוטעה בנורים',1);banner('הטיל הוטעה',1500,'#8dffad');SND.ok()}else{pen(.5,'שחרור נורים ללא טיל באוויר');}}else SND.err()}
+  if(IN.just.has('ecm')){if(M.stores.ecm>0){M.stores.ecm--;M.jam=10;SND.tone();const near=M.sams.some(s=>d2(s.p,P.p)<s.r+1500);if(!near)pen(1,'הפעלת ל"א ללא איום');}else SND.err()}
+  if(IN.just.has('fire')){if(M.stores.msl>0){M.stores.msl--;const tg=M.lock;M.missiles.push({p:add(P.p,scl(P.u,-2)),f:P.f.slice(),tg,t:0});SND.msl();if(!tg)pen(1,'ירי טיל ללא נעילה')}else SND.err()}
+}
+function updS2(dt){const M=S2,P=game.P;M.t+=dt;game.t=M.t;fly(P,dt);
+  const g=groundAt(P.p[0],P.p[2]);M.agl=(P.p[1]-g)*FT;M.kts=P.v*KT;
+  if(P.p[1]<g+3){crashS2();return}
+  const ri=routeInfo(P.p);M.lat=ri.lat;
+  if(d2(P.p,M.route[M.wp])<1500){M.wp++;if(M.wp>=M.route.length){endS2('הגעת לנקודת הסיום');return}SND.click()}
+  const gr=M.t<8,grL=gr||M.t<M.graceUntil;
+  limCheck('ALT',!grL&&(M.agl<M.lim.agl[0]||M.agl>M.lim.agl[1]),dt,.12);
+  limCheck('SPD',!grL&&(M.kts<M.lim.spd[0]||M.kts>M.lim.spd[1]),dt,.08);
+  limCheck('NAV',!gr&&M.lat>1300,dt,.1);
+  const k=DIFF[game.diff].k;
+  M.radioT-=dt;if(M.radioT<=0){M.radioT=rr(17,30)*k;sendRadio()}
+  if(M.radioPending&&M.t-M.radioPending.t0>7){pen(3,'לא נענתה קריאה בקשר');M.radioPending=null}
+  M.sysT-=dt;if(M.sysT<=0){M.sysT=rr(30,55)*k;sysFail()}sysTick();
+  // SAMs
+  M.jam=Math.max(0,M.jam-dt);let inSam=false;
+  for(const s of M.sams){s.cd=Math.max(0,s.cd-dt);if(d2(s.p,P.p)<s.r){inSam=true;if(M.jam>0)s.exp=0;else{s.exp+=dt;if(s.exp>5&&s.cd<=0){s.exp=0;s.cd=22;M.incoming.push({t:6.5,src:'sam'});pen(1,'שוגר טיל קרקע-אוויר (לא הופעל ל"א בזמן)');banner('טיל קרקע-אוויר!',1600,'#ff8a80')}}}else s.exp=0}
+  AL.SAM.state=inSam?'on':'off';
+  // enemies
+  M.enT-=dt;if(M.enT<=0&&M.t<M.tlimit-40){M.enT=rr(65,95)*k;const h=hdgOf(P.f)*DEG+rr(-.35,.35),d=rr(9000,10500),
+    p=[P.p[0]+Math.sin(h)*d,0,P.p[2]-Math.cos(h)*d];p[1]=Math.max(P.p[1]+rr(-120,180),groundAt(p[0],p[2])+300);
+    const f=norm(sub(add(P.p,scl(P.f,2000)),p));M.enemies.push({p,f:norm([f[0],0,f[2]]),v:230,alive:true,fired:false,t:0});SND.tone()}
+  M.lock=null;let air=false,best=1e9;
+  for(const e of M.enemies){e.t+=dt;if(!e.alive)continue;e.f=rotY(e.f,Math.sin(e.t*.6)*.04*dt);e.p=add(e.p,scl(e.f,e.v*dt));
+    const gy=groundAt(e.p[0],e.p[2])+250;if(e.p[1]<gy)e.p[1]=gy;
+    const rel=sub(e.p,P.p),rng=len(rel),ang=Math.acos(clamp(dot(norm(rel),P.f),-1,1))/DEG;e.rng=rng;e.ang=ang;
+    if(rng<12000)air=true;if(ang<10&&rng<6500&&rng<best){best=rng;M.lock=e}
+    if(!e.fired&&rng<2700&&dot(e.f,norm(scl(rel,-1)))>.3){e.fired=true;M.incoming.push({t:4.5,src:'air'});banner('טיל אוויר-אוויר!',1600,'#ff8a80')}
+    if(e.t>75)e.alive=false}
+  M.enemies=M.enemies.filter(e=>e.alive||e.t<2);
+  AL.AIR.state=air?'on':'off';
+  // player missiles
+  for(const m of M.missiles){m.t+=dt;if(m.tg&&m.tg.alive){m.f=norm(add(m.f,scl(norm(sub(m.tg.p,m.p)),dt*6)))}m.p=add(m.p,scl(m.f,680*dt));
+    if(m.tg&&m.tg.alive&&len(sub(m.tg.p,m.p))<45){m.tg.alive=false;m.t=99;M.kills++;fx(m.tg.p,60,1.4);SND.boom();good('מטוס אויב הופל',3);banner('מטוס אויב הופל',1800,'#8dffad')}}
+  M.missiles=M.missiles.filter(m=>m.t<9);
+  // incoming threats
+  for(const m of M.incoming)m.t-=dt;
+  if(M.incoming.length){AL.MSL.state='viol';if(Math.floor(M.t*6)%2===0&&Math.floor((M.t-dt)*6)%2!==0)SND.msl()}else AL.MSL.state='off';
+  const hit=M.incoming.filter(m=>m.t<=0);if(hit.length){M.incoming=M.incoming.filter(m=>m.t>0);M.hits++;pen(10,hit[0].src==='sam'?'נפגעת מטיל קרקע-אוויר':'נפגעת מטיל אוויר-אוויר');flash();SND.boom();banner('נפגעת!',2000,'#ff6b60')}
+  // bombs
+  for(const b of M.bombs){b.v[1]-=9.81*dt;b.p=add(b.p,scl(b.v,dt));const gy=groundAt(b.p[0],b.p[2]);
+    if(b.p[1]<=gy){b.done=true;b.p[1]=gy;fx(b.p,90,1.5);SND.boom();let any=false;
+      for(const t of M.targets){if(t.dead)continue;if(d2(t.p,b.p)<110){t.dead=true;any=true;if(t.pri){good('מטרה בעדיפות הושמדה',0);banner('פגיעה במטרה!',1600,'#8dffad')}else{pen(6,'פגיעה במטרת דמה');banner('פגעת במטרת דמה!',2000,'#ff8a80')}}}
+      if(!any){const near=M.targets.some(t=>!t.dead&&d2(t.p,b.p)<500);game.log.push({t:M.t,txt:near?'פצצה החטיאה (קרוב למטרה)':'פצצה הוטלה רחוק ממטרה',p:0})}}}
+  M.bombs=M.bombs.filter(b=>!b.done);
+  for(const f of M.fx)f.t+=dt;M.fx=M.fx.filter(f=>f.t<f.dur);
+  handleCommonActions(false);
+  if(M.t>=M.tlimit)endS2('נגמר זמן המשימה')}
+function crashS2(){const M=S2,P=game.P;M.crashes++;pen(20,'התרסקות');SND.boom();flash();banner('התרסקות! ממשיך מהמסלול',2500,'#ff6b60');
+  const R=M.route,i=Math.min(M.wp,R.length-1),A=R[Math.max(0,i-1)],B=R[i],t=.5,p=[lerp(A[0],B[0],t),0,lerp(A[2],B[2],t)];
+  p[1]=groundAt(p[0],p[2])+350;Object.assign(P,makePlane(p,Math.atan2(B[0]-A[0],-(B[2]-A[2])),200))}
+function endS2(why){const M=S2;engineOff();
+  const missed=M.targets.filter(t=>t.pri&&!t.dead).length;if(missed)pen(15*missed,`${missed} מטרות בעדיפות לא הושמדו`);
+  if(M.wp<M.route.length)pen(12,'המסלול לא הושלם');
+  game.res.s2={why,score:Math.round(clamp(100-game.pen+game.bonus,0,100)),pri:M.targets.filter(t=>t.pri&&t.dead).length,dec:M.targets.filter(t=>!t.pri&&t.dead).length,
+    kills:M.kills,hits:M.hits,crashes:M.crashes,viol:{...game.res.viol},log:game.log.slice(),t:M.t,cs:M.cs};
+  showDebrief()}
+
+/* ================= Yarpa A: chase simulator ================= */
+const FOVA=24*DEG;
+const A1X=[
+ {name:'תרגול חופשי',desc:()=>'הכר את תגובת המטוס לסטיק ולמצערת. אין ניקוד. התרגול נגמר אחרי 60 שניות או בלחיצה על ירי.',free:true,time:60,start:700,en:{turn:[.02,.025]}},
+ {name:'התקרבות ושמירת מרחק',desc:a=>`עליך להתקרב למטוס האויב ולשמור על מרחק של ${a.lo} עד ${a.hi} מטר כשהוא בתוך העיגול, למשך 5 שניות ברצף. לרשותך 60 שניות להשלמת המשימה.`,time:60,start:1000,hold:5,win:[450,750],en:{}},
+ {name:'שמירת מרחק מדויקת',desc:a=>`שמור מרחק של ${a.lo} עד ${a.hi} מטר ממטוס האויב כשהוא בתוך העיגול, למשך 10 שניות ברצף. לרשותך 90 שניות.`,time:90,start:1000,hold:10,win:[400,750],en:{}},
+ {name:'מעקב בפניות',desc:a=>`מטוס האויב פונה ימינה ושמאלה. החזק אותו בתוך העיגול ובמרחק ${a.lo} עד ${a.hi} מטר למשך 8 שניות ברצף. לרשותך 90 שניות.`,time:90,start:900,hold:8,win:[400,700],en:{turn:[.05,.03]}},
+ {name:'מעקב בשינויי גובה',desc:a=>`מטוס האויב עולה ויורד. החזק אותו בתוך העיגול ובמרחק ${a.lo} עד ${a.hi} מטר למשך 8 שניות ברצף. לרשותך 90 שניות.`,time:90,start:900,hold:8,win:[400,700],en:{climb:[12,.035]}},
+ {name:'מעקב משולב',desc:a=>`פניות ושינויי גובה יחד. החזק את מטוס האויב בעיגול ובמרחק ${a.lo} עד ${a.hi} מטר למשך 10 שניות ברצף. לרשותך 90 שניות.`,time:90,start:900,hold:10,win:[400,700],en:{turn:[.06,.035],climb:[11,.04]}},
+ {name:'ירי',desc:a=>`עליך לירות במטוס האויב. תנאי נעילה: טווח ${a.lo}–${a.hi} מטר וזווית עד ${a.angMax} מעלות (בתוך העיגול), 5 שניות ברצף. אחוז פגיעה מרבי: ${Math.round(a.maxP*100)} אחוז. נדרשות 20 פגיעות. 100 פגזים, 60 שניות.`,time:60,start:1000,hold:5,gun:true,need:20,win:[300,650],en:{turn:[.025,.03],climb:[4,.035]}},
+ {name:'ירי מתקדם',desc:a=>`כמו בתרגיל הקודם, אבל מטוס האויב מתמרן יותר. תנאי נעילה: טווח ${a.lo}–${a.hi} מטר וזווית עד ${a.angMax} מעלות. אחוז פגיעה מרבי: ${Math.round(a.maxP*100)} אחוז. נדרשות 20 פגיעות. 100 פגזים, 60 שניות.`,time:60,start:1000,hold:5,gun:true,need:20,win:[300,650],en:{turn:[.04,.035],climb:[6,.04]}}];
+/* maximum hit chance by range: ~83% at 400 m, ~69% at 500 m, ~55% at 600 m, ~41% at 700 m, ~27% at 800 m */
+const a1HitP=d=>clamp(69-.14*(d-500),5,95)/100;
+
+/* ---------- interactive tutorial: one gauge added per lesson ---------- */
+const A1L=[
+ {name:'מד המהירות והמצערת',goal:'speed',show:['speed','thr'],focus:'speed',time:90,start:1500,hold:3,en:{},
+  desc:()=>'הבא את מד המהירות ל-+30 (בין +22 ל-+38) והחזק 3 שניות. השתמש רק במצערת.',
+  intro:`<p><b>מד המהירות</b> (משמאל) מראה את <b>ההפרש</b> בין המהירות שלך למהירות המטרה, בקשרים.</p>
+   <ul><li><b>0</b> – אתם באותה מהירות, המרחק לא משתנה.</li><li><b>חיובי (+)</b> – אתה מהיר יותר ומתקרב.</li><li><b>שלילי (−)</b> – אתה איטי יותר ומתרחק.</li></ul>
+   <p><b>המצערת</b> (מתחת למד, ‎−10‎ עד ‎+10‎) קובעת <b>תאוצה</b>: ערך חיובי מאיץ, שלילי מאט, ו-0 שומר על המהירות. התאוצה נבנית ודועכת בהדרגה – כמו במטוס אמיתי.</p>`,
+  task:'דחוף את המצערת קדימה עד שמד המהירות מגיע ל-+30, ואז החזר אותה ל-0 כדי שהמהירות תישאר שם. החזק 3 שניות.'},
+ {name:'השוואת מהירות',goal:'match',rel0:50,show:['speed','thr'],focus:'thr',time:90,start:2200,hold:4,en:{},
+  desc:()=>'אתה מהיר מהמטרה ב-50 קשר. האט עד שמד המהירות על 0 (±5) והחזק 4 שניות.',
+  intro:`<p>כדי לשמור על מרחק קבוע מהמטרה צריך לטוס <b>באותה מהירות</b> שלה – כלומר מד המהירות על <b>0</b>.</p>
+   <p>בתחילת התרגול אתה מהיר מהמטרה ב-50 קשר. כדי להאט צריך <b>מצערת שלילית</b>. כי התאוצה דועכת בהדרגה, החזר את המצערת ל-0 <b>קצת לפני</b> שהמד מגיע ל-0.</p>`,
+  task:'משוך את המצערת לאחור, ולפני שמד המהירות מגיע ל-0 החזר אותה למרכז. החזק את המד בין −5 ל-+5 במשך 4 שניות.'},
+ {name:'מד המרחק',goal:'range',show:['speed','thr','range'],focus:'range',time:90,start:1200,hold:5,win:[450,650],en:{},
+  desc:a=>`היכנס לחלון המרחק ${a.lo}–${a.hi} מטר והחזק 5 שניות ברצף.`,
+  intro:`<p><b>מד המרחק</b> (מימין) מראה כמה מטרים אתה מהמטרה. המספר שליד הבר הוא המרחק המדויק.</p>
+   <ul><li>האזור <b>הירוק</b> הוא <b>חלון היעד</b> – תמיד ברוחב 200 מ'. הבר נצבע ירוק כשאתה בתוכו.</li><li><b>החץ הלבן</b> מראה אם המרחק נסגר או נפתח, ובאיזה קצב.</li></ul>
+   <p>הדרך הנכונה: האץ מעט כדי להתקרב (מד מהירות חיובי), ולפני שמגיעים לחלון האט עד שמד המהירות חוזר ל-0 – אז המרחק נעצר.</p>`,
+  task:'היכנס לחלון הירוק ועצור בתוכו בעזרת המצערת. החזק 5 שניות ברצף.'},
+ {name:'הכוונת והזווית',goal:'angle',show:['speed','thr','range','circle','angle'],focus:'circle',time:90,start:600,hold:6,en:{turn:[.03,.03]},
+  desc:()=>'החזק את המטרה בתוך העיגול 6 שניות ברצף. המטרה פונה לאט.',
+  intro:`<p><b>העיגול</b> במרכז המסך הוא <b>אזור המטרה</b>, והצלב הוא מרכז הכוונת.</p>
+   <p>תיבת <b>זוית</b> מראה בכמה מעלות המטרה רחוקה מהמרכז – 0 פירושו שהמטרה בדיוק על הצלב.</p>
+   <p>בתרגול הזה המטרה פונה לאט. כדי לפנות אחריה – גלגל את הסטיק לכיוון הפנייה ומשוך מעט. תנועות קטנות ורגועות; תיקון גדול מדי יעביר את המטרה לצד השני.</p>`,
+  task:'שמור את המטרה בתוך העיגול 6 שניות ברצף. המרחק לא משנה בשלב הזה.'},
+ {name:'נעילה',goal:'lock',show:['speed','thr','range','circle','angle','light'],focus:'light',time:90,start:900,hold:5,win:[400,650],en:{turn:[.025,.03]},
+  desc:a=>`החזק את המטרה בתוך העיגול ובחלון ${a.lo}–${a.hi} מטר 5 שניות ברצף כדי להינעל.`,
+  intro:`<p>כשהמטרה <b>גם בתוך העיגול וגם בחלון המרחק</b> – מתחילה <b>נעילה</b>:</p>
+   <ul><li><b>נורה צהובה</b> (והעיגול צהוב) – הנעילה בתהליך.</li><li>אחרי <b>5 שניות ברצף</b> – <b>נורה ירוקה</b> (והעיגול ירוק): ננעלת.</li><li>יציאה מאחד התנאים מאפסת את הנעילה, וצריך להתחיל מחדש.</li></ul>
+   <p>בלי נעילה אי אפשר לירות – לכן זו המיומנות המרכזית.</p>`,
+  task:'הבא את המטרה לעיגול ולחלון המרחק בו-זמנית, והחזק עד שהנורה ירוקה.'},
+ {name:'אחוזי פגיעה',goal:'pct',gun:true,noFire:true,pct:.55,ang:4,pctHold:3,show:['speed','thr','range','circle','angle','light','pct'],focus:'pct',time:90,start:900,hold:5,win:[300,450],en:{turn:[.02,.03]},
+  desc:a=>`הינעל (טווח ${a.lo}–${a.hi} מ', זווית עד ${a.angMax} מעלות) והבא את אחוזי הפגיעה ל-55 אחוז ומעלה למשך 3 שניות – בלי לירות. המרבי כאן: ${Math.round(a.maxP*100)} אחוז.`,
+  intro:`<p>אחרי נעילה, תיבת <b>אחוזי פגיעה</b> מציגה את <b>סיכוי הפגיעה עכשיו</b> – גם בלי לירות. מחוץ לתנאים היא מציגה "--".</p>
+   <p>לכל ניסיון יש <b>אחוז פגיעה מרבי</b> שנקבע לפי חלון המרחק (למשל כ-69% בחלון 400–600 מ', כ-41% בחלון 600–800 מ'), ואי אפשר לעבור אותו. מתחת למרבי, הסיכוי יורד לפי שלושה דברים:</p>
+   <ul><li><b>זווית</b> – רק במרכז העיגול מקבלים את המרבי. כבר בחצי הדרך לשפה הסיכוי יורד כמעט בחצי.</li><li><b>מרחק בתוך החלון</b> – בקצה הקרוב הכי גבוה, בקצה הרחוק נמוך יותר.</li><li><b>יציבות</b> – מד המהירות קרוב ל-0. התקרבות או התרחקות מהירה מורידות את הסיכוי.</li></ul>`,
+  task:'הינעל, מרכז את המטרה בדיוק על הצלב, התקרב לקצה הקרוב של החלון ושמור על מד מהירות סביב 0, עד שהתיבה מראה 55% ומעלה. החזק 3 שניות.'},
+ {name:'ירי',goal:'fire',gun:true,need:10,ang:3.5,show:['speed','thr','range','circle','angle','light','pct','ammo'],focus:'ammo',time:90,start:900,hold:5,win:[300,500],en:{turn:[.015,.03]},
+  desc:a=>`הינעל (טווח ${a.lo}–${a.hi} מ', זווית עד ${a.angMax} מעלות) וירה: נדרשות 10 פגיעות. 100 פגזים.`,
+  intro:`<p>אפשר לירות <b>רק כשהנורה ירוקה</b>. החזקת כפתור הירי יורה צרור – 10 פגזים בשנייה.</p>
+   <ul><li>כל פגז פוגע לפי <b>אחוזי הפגיעה</b> שבתיבה באותו רגע – לכן כדאי לירות כשהאחוז גבוה.</li><li>בר <b>התחמושת</b> מראה כמה פגזים נשארו מתוך 100.</li><li>בפגיעה המטרה מהבהבת בצהוב.</li></ul>`,
+  task:'הינעל, וכשהנורה ירוקה החזק את כפתור הירי. השג 10 פגיעות.'},
+ {name:'הכל ביחד',goal:'fire',gun:true,need:20,ang:3,show:null,focus:null,time:90,start:1000,hold:5,win:[300,600],en:{turn:[.035,.035],climb:[6,.04]},
+  desc:a=>`כל המדדים יחד, מטרה מתמרנת. טווח ${a.lo}–${a.hi} מ', זווית עד ${a.angMax} מעלות, אחוז פגיעה מרבי ${Math.round(a.maxP*100)} אחוז. נדרשות 20 פגיעות.`,
+  intro:`<p>עכשיו הכל ביחד, עם מטרה שפונה ומשנה גובה – בדיוק כמו בתרגילי הירי:</p>
+   <ol><li>השווה מהירות (מד המהירות סביב 0).</li><li>היכנס לחלון המרחק.</li><li>החזק את המטרה בעיגול עד שהנורה ירוקה.</li><li>ירה כשאחוזי הפגיעה גבוהים, ותקן כל הזמן מהירות, מרחק וכיוון.</li></ol>`,
+  task:'השג 20 פגיעות לפני שנגמרים הזמן או התחמושת.'}];
+const EXL=()=>A1.list||A1X;
+
+let A1=null;
+function startA1(only,list){resetAlerts();game.t=0;game.pen=0;game.bonus=0;game.log=[];
+  A1={list:list||null,course:game.flow==='course'?game.courseKind:null,i:only??0,only:only??null,att:0,res:[],maxAtt:{easy:8,normal:6,hard:4}[game.diff],bg:'blue',fx:[]};
+  document.body.classList.add('a1');show(null);game.mode='a1';game.paused=false;engineOn();prepA1()}
+function prepA1(){if(A1.course)return prepCourse();const X=EXL()[A1.i],hdg=rr(0,2*Math.PI),alt=2700,f=[Math.sin(hdg),0,-Math.cos(hdg)];
+  Object.assign(A1,{state:'ready',t:0,hold:0,out:0,armed:false,ammo:100,shots:0,hits:0,pSum:0,pNow:null,gunT:0,trigLock:true,hitFx:0,onT:0,best:0,wait:0,
+    hdg0:hdg,alt0:alt,dist:X.start,ang:0,clos:0,relKt:0,ok:false,why:'',zIn:5,zArc:3.2});
+  if(X.win){const steps=Math.round((X.win[1]-X.win[0])/50);A1.lo=X.win[0]+50*Math.floor(Math.random()*(steps+1));A1.hi=A1.lo+200}else{A1.lo=A1.hi=null}
+  A1.angMax=X.gun?(X.ang||pick([2,2.5,3,3.5])):null;A1.maxP=X.gun&&A1.lo!=null?a1HitP((A1.lo+A1.hi)/2):null;
+  A1.en={p:[0,alt,0],hdg,v:200,t:rr(0,40),f,u:[0,1,0],r:cross(f,[0,1,0])};
+  game.P=makePlane([-f[0]*X.start,alt-12,-f[2]*X.start],hdg,200);game.P.thr=.5;IN.kbT=.5;A1.thrAct=0;A1.thrCmd=0;A1.acc=0;if(IN.src==='pad')IN.lastT=null;A1.pctT=0;
+  if(X.rel0)game.P.v=A1.en.v+X.rel0/KT;
+  if(A1.list&&A1.att===0)lessonCard()}
+function updEnemyA1(dt){const E=A1.en,C=EXL()[A1.i].en,t=(E.t+=dt),w=2*Math.PI;
+  E.v=200; // enemy flies at a constant speed in all exercises
+  const hr=C.turn?C.turn[0]*(Math.sin(C.turn[1]*w*t+.5)+.4*Math.sin(C.turn[1]*w*2.6*t)):0;E.hdg+=hr*dt;
+  let vy=C.climb?C.climb[0]*Math.sin(C.climb[1]*w*t+.9):0;vy+=clamp((A1.alt0-E.p[1])*.02,-6,6);
+  const vh=Math.sqrt(Math.max(1,E.v*E.v-vy*vy));E.f=norm([Math.sin(E.hdg)*vh,vy,-Math.cos(E.hdg)*vh]);E.p=add(E.p,scl(E.f,E.v*dt));
+  const fr=frameFromDir(E.f);[E.u,E.r]=rotPair(fr.u,fr.r,Math.atan(E.v*hr/9.81))}
+function a1Rec(passed){const X=EXL()[A1.i];A1.res.push({name:X.name,passed,att:passed?A1.att+1:A1.att,t:A1.t,best:A1.best,on:A1.onT/Math.max(1,A1.t),acc:X.gun?(A1.shots?A1.hits/A1.shots:0):null})}
+function a1Done(passed,why){const X=EXL()[A1.i];
+  if(X.free){A1.state='wait';A1.wait=1.2;A1.next=true;return}
+  if(passed){a1Rec(true);SND.ok();banner('הצלחה! '+X.name,2200,'#8dffad');A1.next=true;why='הצלחה!'}
+  else{A1.att++;game.log.push({t:A1.t,txt:`${X.name}: ${why}`,p:-1});SND.err();
+    const left=game.practice?Infinity:A1.maxAtt-A1.att;
+    if(left<=0){a1Rec(false);banner(`${why} – עוברים לתרגיל הבא`,2600,'#ff8a80');A1.next=true}
+    else{banner(`${why} – ניסיון חוזר`,2200,'#ffb000');A1.next=false}}
+  A1.state='wait';A1.wait=2.2;A1.why=why}
+function updA1(dt){if(A1.course)return updCourse(dt);const X=EXL()[A1.i],P=game.P;
+  A1.hitFx=Math.max(0,A1.hitFx-dt);
+  if(A1.state==='card'){if(IN.just.has('fire')){IN.just.delete('fire');lessonGo()}return}
+  if(A1.state==='ready'){if(IN.just.has('fire')){A1.state='run';SND.click();IN.just.delete('fire')}return}
+  if(A1.state==='wait'){A1.wait-=dt;if(A1.wait<=0){if(A1.next){if(A1.only!=null){finishA1();return}A1.i++;A1.att=0;if(A1.i>=EXL().length){finishA1();return}}prepA1()}return}
+  A1.t+=dt;game.t=A1.t;flyA1(P,dt);updEnemyA1(dt);
+  const rel=sub(A1.en.p,P.p),dist=len(rel),ang=Math.acos(clamp(dot(norm(rel),P.f),-1,1))/DEG;
+  A1.clos=(A1.dist-dist)/dt;A1.dist=dist;A1.ang=ang;A1.relKt=(P.v-A1.en.v)*KT;
+  if(X.free){if(A1.t>=X.time||IN.just.has('fire'))a1Done(true);return}
+  if(ang>95&&dist<1500){a1Done(false,'עברת את המטרה');return}
+  if(dist>3000){a1Done(false,'איבדת את המטרה');return}
+  if(dist<40){flash();a1Done(false,'התנגשות במטרה');return}
+  const zone=X.gun?A1.angMax:A1.zIn,inRange=A1.lo!=null&&dist>=A1.lo&&dist<=A1.hi;
+  A1.ok=X.goal==='speed'?Math.abs(A1.relKt-30)<=8:X.goal==='match'?Math.abs(A1.relKt)<=5:X.goal==='range'?inRange:X.goal==='angle'?ang<zone:inRange&&ang<zone;
+  if(A1.ok){A1.onT+=dt;A1.out=0;A1.hold+=dt}else{A1.out+=dt;if(A1.out>.3){A1.hold=0;if(A1.armed){A1.armed=false;SND.tone()}}}
+  A1.best=Math.max(A1.best,A1.hold);
+  if(!X.gun&&A1.hold>=X.hold+(X.goal==='lock'?1.5:0)){a1Done(true);return}
+  if(X.gun){if(!A1.armed&&A1.hold>=X.hold){A1.armed=true;SND.ok()}
+    // current hit chance: shown/usable only when in range + locked + inside the circle; drops toward the circle edge
+    // hit chance = window maximum x range factor x aiming factor x speed-stability factor (never above the maximum)
+    if(A1.armed&&A1.ok){const fd=1-.3*clamp((A1.dist-A1.lo)/(A1.hi-A1.lo),0,1),fa=Math.max(0,1-.85*Math.pow(A1.ang/zone,.8)),fs=clamp(1-(Math.abs(A1.relKt)-5)/50,.5,1);
+      A1.pNow=Math.min(A1.maxP,A1.maxP*fd*fa*fs)}else A1.pNow=null;
+    if(X.goal==='pct'){if(A1.pNow!=null&&A1.pNow>=X.pct)A1.pctT+=dt;else A1.pctT=0;A1.best=Math.max(A1.best,A1.pctT);if(A1.pctT>=X.pctHold){a1Done(true);return}if(A1.t>=X.time){a1Done(false,'הזמן נגמר');return}return}
+    if(!IN.act.fire)A1.trigLock=false;
+    if(IN.act.fire&&!A1.trigLock&&A1.ammo>0&&A1.pNow!=null){A1.gunT-=dt;
+      while(A1.gunT<=0&&A1.ammo>0){A1.gunT+=.1;A1.ammo--;A1.shots++;A1.pSum+=A1.pNow;const hit=Math.random()<A1.pNow;if(hit){A1.hits++;A1.hitFx=.12}beep(hit?880:300,.035,'square',.025)}}
+    else A1.gunT=0;
+    if(A1.hits>=X.need){a1Done(true);return}
+    if(A1.ammo<=0){a1Done(false,`נגמרה התחמושת – ${A1.hits}/${X.need} פגיעות`);return}
+    if(A1.t>=X.time){a1Done(false,`הזמן נגמר – ${A1.hits}/${X.need} פגיעות`);return}
+    return}
+  if(A1.t>=X.time)a1Done(false,'הזמן נגמר')}
+
+function lessonCard(){const X=A1.list[A1.i];A1.state='card';
+  $('#lprog').innerHTML=A1.list.map((l,k)=>`<i class="${k<A1.i?'done':k===A1.i?'cur':''}"></i>`).join('');
+  $('#lstep').textContent=`שלב ${A1.i+1} מתוך ${A1.list.length}`;$('#ltitle').textContent=X.name;$('#lbody').innerHTML=X.intro;$('#ltask').textContent=X.task;$('#ltask').parentElement.style.display='';show('#lesson')}
+function lessonGo(){show(null);A1.state='run';SND.click()}
+function startTutorial(){game.diff='normal';game.practice=true;game.flow='tut';game.res={viol:{}};startA1(null,A1L)}
+function finishA1(){engineOff();document.body.classList.remove('a1');game.res.a1={res:A1.res.slice(),log:game.log.slice(),tot:A1.list?A1.list.length:A1X.length-1,tut:!!A1.list,course:A1.course};showDebrief()}
+const A1C={bg:[.114,.2,.66],bgK:[.01,.015,.03],line:'#c6e24a',num:'#f2e94e',txt:'#ffffff',green:'#3fd23a',fill:'#d3d55c',orange:'#f5a623',bad:'#ff6a5e'};
+function renderA1(){resize();const P=game.P,bg=A1.bg==='black'?A1C.bgK:A1C.bg;gl.viewport(0,0,glc.width,glc.height);
+  gl.clearColor(bg[0],bg[1],bg[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);if(!P)return;
+  VPm=mmul(perspective(FOVA,glc.width/glc.height,2,20000),lookAt(P.p,add(P.p,P.f),P.u))}
+function tri2Mesh(){const b=TB(),dh=Math.tan(20*DEG)*8,w=[.82,.9,1];b.tri([0,0,7],[-8,dh,-5],[0,0,-5],w);b.tri([0,0,7],[0,0,-5],[8,dh,-5],w);b.tri([0,0,-.5],[0,5.5,-5.5],[0,0,-5],[1,.32,.26]);return b.done()}
+const A1SHAPES={
+  flat:[[[0,0,7],[-8,0,-5],[0,0,-3.6],[8,0,-5]],[[0,0,-.6],[0,5.5,-5.6],[0,0,-5]]],
+  straight:[[[0,0,7],[0,0,-6.2]],[[-8.5,0,1.6],[8.5,0,1.6],[8.5,0,-.8],[-8.5,0,-.8]],[[-3.2,0,-4.6],[3.2,0,-4.6],[3.2,0,-6.2],[-3.2,0,-6.2]],[[0,0,-3.6],[0,3.8,-6.2],[0,0,-6.2]]]};
+let A1SHAPE=A1SHAPES.flat;
+function drawHUDA1(){const W=hud.clientWidth,H=hud.clientHeight;hx.setTransform(DPR,0,0,DPR,0,0);hx.clearRect(0,0,W,H);const P=game.P;if(!P||!VPm)return;
+  const X=EXL()[A1.i],s=Math.min(W/808,H/538),ox=(W-808*s)/2,oy=(H-538*s)/2,Xp=x=>ox+x*s,Yp=y=>oy+y*s,cx=W/2,cy=H/2,C=A1C;
+  const foc=(H/2)/Math.tan(FOVA/2);A1.zIn=A1.zArc=Math.atan(90*s/foc)/DEG;const SH=k=>!X.show||X.show.includes(k);
+  const F=(px,b='')=>`${b} ${Math.round(px*s)}px Arial`;hx.textBaseline='middle';hx.shadowBlur=0;hx.lineJoin='round';
+  const box=(x0,y0,x1,y1,val,col)=>{hx.strokeStyle=C.line;hx.lineWidth=1.6*s;hx.strokeRect(Xp(x0),Yp(y0),(x1-x0)*s,(y1-y0)*s);
+    if(val!=null){hx.fillStyle=col||C.txt;hx.direction='ltr';hx.textAlign='center';hx.font=F(15);hx.fillText(val,Xp((x0+x1)/2),Yp((y0+y1)/2)+1)}};
+  const label=(t,x,y)=>{hx.fillStyle=C.line;hx.direction='rtl';hx.textAlign='center';hx.font=F(13.5);hx.fillText(t,Xp(x),Yp(y))};
+  // reticle: one circle (target zone) + small solid "+" in the centre
+  {const run=A1.state==='run'&&!X.free,lk=run&&A1.ok,gr=lk&&(X.gun?A1.armed:A1.hold>=X.hold),col=gr?'#36e04a':lk?'#ffd400':C.line;
+   if(SH('circle')){hx.strokeStyle=col;hx.lineWidth=(lk?3:2)*s;hx.beginPath();hx.arc(cx,cy,X.gun&&A1.angMax?foc*Math.tan(A1.angMax*DEG):90*s,0,7);hx.stroke()}
+   hx.strokeStyle=C.line;hx.lineWidth=1.8*s;hx.beginPath();hx.moveTo(cx-14*s,cy);hx.lineTo(cx+14*s,cy);hx.moveTo(cx,cy-14*s);hx.lineTo(cx,cy+14*s);hx.stroke()}
+  // enemy wireframe
+  const E=A1.en,wp=v=>add(E.p,add(scl(E.r,v[0]*1.4),add(scl(E.u,v[1]*1.4),scl(E.f,v[2]*1.4)))),pts=A1SHAPE.map(poly=>poly.map(v=>project(wp(v))));
+  const vis=pts.every(poly=>poly.every(q=>q));const sp=project(E.p);
+  if(vis){hx.strokeStyle=A1.hitFx>0?C.num:'#ffffff';hx.fillStyle=A1.hitFx>0?'rgba(242,233,78,.35)':'rgba(255,255,255,.1)';hx.lineWidth=1.4*s;
+    for(const poly of pts){hx.beginPath();poly.forEach((q,i)=>i?hx.lineTo(q[0],q[1]):hx.moveTo(q[0],q[1]));hx.closePath();hx.fill();hx.stroke()}}
+  if(!(sp&&sp[0]>0&&sp[0]<W&&sp[1]>0&&sp[1]<H)&&!(A1.ang>95)){const rel=sub(E.p,P.p),dx=dot(rel,P.r),dy=dot(rel,P.u),a=Math.atan2(-dy,dx),r=198*s;
+    hx.save();hx.translate(cx+Math.cos(a)*r,cy+Math.sin(a)*r);hx.rotate(a);hx.fillStyle=C.num;hx.beginPath();hx.moveTo(16*s,0);hx.lineTo(-7*s,-10*s);hx.lineTo(-7*s,10*s);hx.closePath();hx.fill();hx.restore()}
+  // countdown
+  {const rem=Math.max(0,X.time-A1.t),tl=Math.ceil(rem),warn=tl<=10&&A1.state==='run',col=warn?C.bad:C.num,bx=Xp(406-36),by=Yp(26),bw=72*s,bh=40*s;
+   hx.fillStyle=C.line;hx.font=F(10.5);hx.direction='rtl';hx.textAlign='center';hx.fillText('זמן',Xp(406),Yp(18));
+   hx.strokeStyle=col;hx.lineWidth=2*s;hx.strokeRect(bx,by,bw,bh);
+   hx.fillStyle=col;hx.font=`bold ${Math.round(21*s)}px Consolas,monospace`;hx.direction='ltr';hx.fillText(fmtT(tl),Xp(406),by+bh*.42);
+   const px=bx+5*s,pw=bw-10*s,py=by+bh-9*s;hx.fillStyle='rgba(0,0,40,.35)';hx.fillRect(px,py,pw,4*s);hx.fillStyle=col;hx.fillRect(px,py,pw*clamp(rem/X.time,0,1),4*s)}
+  if(A1.course&&A1.state==='run'){const sc=courseScore(),bw=160*s,bx=cx-bw/2,by=Yp(388);hx.strokeStyle=C.line;hx.lineWidth=1.4*s;hx.strokeRect(bx,by,bw,9*s);hx.fillStyle=A1.cond?'#36e04a':'#8aa04a';hx.fillRect(bx,by,bw*sc,9*s);
+    hx.fillStyle='#fff';hx.fillRect(bx+bw*X.pass-1*s,by-3*s,2*s,15*s);hx.fillStyle=C.txt;hx.font=F(12);hx.direction='rtl';hx.textAlign='center';hx.fillText(X.goal==='fire'?`פגיעות ${A1.hits}/${X.need}`:`ביצוע ${Math.round(sc*100)}%`,cx,by+22*s)}
+  if(A1.course&&A1.state==='count'){hx.fillStyle=C.num;hx.font=`bold ${Math.round(64*s)}px Arial`;hx.direction='ltr';hx.textAlign='center';hx.fillText(Math.ceil(A1.cd),cx,cy-130*s)}
+  if(!A1.course&&(A1.list&&A1.state==='run'&&!X.gun||A1.list&&X.goal==='pct'&&A1.state==='run')){const need=X.goal==='pct'?X.pctHold:X.hold,v=X.goal==='pct'?A1.pctT:A1.hold,bw=160*s,bx=cx-bw/2,by=Yp(388);
+    hx.strokeStyle=C.line;hx.lineWidth=1.4*s;hx.strokeRect(bx,by,bw,9*s);hx.fillStyle='#36e04a';hx.fillRect(bx,by,bw*clamp(v/need,0,1),9*s);
+    hx.fillStyle=C.txt;hx.font=F(12);hx.direction='rtl';hx.textAlign='center';hx.fillText(`${Math.min(v,need).toFixed(1)} / ${need} שנ'`,cx,by+22*s)}
+  // instructions (top right)
+  hx.fillStyle=C.txt;hx.direction='rtl';hx.textAlign='right';hx.font=F(14.5,'600');wrapText(A1.course?drillDesc(X,A1):X.desc(A1),Xp(796),Yp(30),270*s,19.5*s);
+  // top-left: menu + exercise
+  {const mx=10,my=10,ms=32;A1.menuBtn=[mx,my,ms];hx.strokeStyle=C.line;hx.lineWidth=1.6;hx.fillStyle='rgba(10,20,50,.35)';hx.fillRect(mx,my,ms,ms);hx.strokeRect(mx,my,ms,ms);
+   hx.fillStyle=C.line;for(let i=0;i<3;i++)hx.fillRect(mx+8,my+9+i*6.5,ms-16,2.4);
+   const t=A1.course==='course'?`פרק ${X.modIdx+1}/${COURSE_MODULES.length}  ·  ${X.modName}  ·  תרגיל ${X.kInMod+1}/${X.nInMod}`:A1.course==='practice'?`תרגול  ·  תרגיל ${A1.i+1}/${A1.list.length}`:A1.course==='exam'?`מבחן מסכם  ·  ${X.name}  ·  ${A1.i+1}/${A1.list.length}`:A1.list?`שלב ${A1.i+1}/${A1.list.length}  ·  ${X.name}`:`תרגיל ${A1.i}/${A1X.length-1}  ·  ${X.free?'תרגול':'ניסיון '+(A1.att+1)+'/'+(game.practice?'∞':A1.maxAtt)}`;
+   hx.font='12px Arial';hx.direction='rtl';const tw=hx.measureText(t).width+22,tx=mx+ms+8,ty=my+4,th=ms-8;
+   hx.strokeStyle='rgba(198,226,74,.6)';hx.lineWidth=1.3;hx.strokeRect(tx,ty,tw,th);hx.fillStyle=C.line;hx.textAlign='center';hx.fillText(t,tx+tw/2,ty+th/2+1)}
+  // speed meter (left): relative speed own-enemy, kt — bar from 0, pointer + readout
+  if(SH('speed')){const x0=Xp(52),w=18*s,yT=Yp(150),Hh=226*s,yv=k=>yT+(100-k)/200*Hh,rv=clamp(Math.round(A1.relKt),-100,100),y0=yv(0),yr=yv(rv);
+   hx.fillStyle='rgba(0,0,40,.25)';hx.fillRect(x0,yT,w,Hh);hx.fillStyle='rgba(54,224,74,.22)';if(X.goal==='speed')hx.fillRect(x0,yv(A1.course?A1.spdT+6:38),w,yv(A1.course?A1.spdT-6:22)-yv(A1.course?A1.spdT+6:38));else hx.fillRect(x0,yv(10),w,yv(-10)-yv(10));
+   hx.fillStyle=Math.abs(rv)<=10?'#36e04a':rv>0?'#7fe36a':C.orange;hx.fillRect(x0+3*s,Math.min(y0,yr),w-6*s,Math.abs(yr-y0));
+   hx.strokeStyle=C.line;hx.lineWidth=1.4*s;hx.strokeRect(x0,yT,w,Hh);
+   hx.direction='ltr';hx.textAlign='left';
+   for(let k=100;k>=-100;k-=10){const yy=yv(k),maj=k%50===0;hx.strokeStyle=k===0?'#fff':C.line;hx.lineWidth=(k===0?2.4:1.2)*s;hx.beginPath();hx.moveTo(x0+w,yy);hx.lineTo(x0+w+(maj?11:6)*s,yy);hx.stroke();
+     if(k%20===0){hx.fillStyle=k===0?'#fff':C.line;hx.font=F(11,k===0?'bold':'');hx.fillText((k>0?'+':'')+k,x0+w+16*s,yy)}}
+   hx.strokeStyle='#fff';hx.lineWidth=2.4*s;hx.beginPath();hx.moveTo(x0-6*s,y0);hx.lineTo(x0+w,y0);hx.stroke();
+   const px=x0-2*s;hx.fillStyle=C.num;hx.beginPath();hx.moveTo(px,yr);hx.lineTo(px-10*s,yr-7*s);hx.lineTo(px-10*s,yr+7*s);hx.closePath();hx.fill();
+   hx.strokeStyle=C.num;hx.lineWidth=1.6*s;hx.strokeRect(px-54*s,yr-11*s,42*s,22*s);hx.textAlign='center';hx.font=F(13,'bold');hx.fillStyle=C.num;hx.fillText((rv>0?'+':'')+rv,px-33*s,yr+1);
+   if(A1.state==='run'&&Math.abs(rv)>3){hx.direction='rtl';hx.font=F(11);hx.fillStyle=rv>0?'#7fe36a':C.orange;hx.fillText(rv>0?'▲ מתקרב':'▼ מתרחק',x0+w/2,yT-13*s)}
+   hx.direction='rtl';hx.textAlign='center';hx.font=F(13.5);hx.fillStyle=C.line;hx.fillText('מד מהירות (kt)',x0+w/2+6*s,yT+Hh+19*s)}
+  // distance bar (right): target band, green when inside, pointer + readout, closure trend
+  if(SH('range')){const x0=Xp(726),w=20*s,dT=Yp(150),Hh=228*s,dB=dT+Hh,dy=k=>dB-clamp(k,0,1100)/1100*Hh,d=Math.round(A1.dist),band=A1.lo!=null?[A1.lo,A1.hi]:null,inB=band&&d>=band[0]&&d<=band[1];
+   hx.fillStyle='rgba(0,0,40,.25)';hx.fillRect(x0,dT,w,Hh);
+   if(band){hx.fillStyle='rgba(54,224,74,.28)';hx.fillRect(x0-4*s,dy(band[1]),w+8*s,dy(band[0])-dy(band[1]))}
+   hx.fillStyle=inB?'#36e04a':C.fill;hx.fillRect(x0+3*s,dy(d),w-6*s,dB-dy(d));
+   hx.strokeStyle=C.line;hx.lineWidth=1.4*s;hx.strokeRect(x0,dT,w,Hh);
+   if(band){hx.strokeStyle='#36e04a';hx.lineWidth=2*s;for(const k of band){hx.beginPath();hx.moveTo(x0-6*s,dy(k));hx.lineTo(x0+w+6*s,dy(k));hx.stroke()}}
+   hx.direction='ltr';hx.textAlign='right';hx.font=F(11);hx.fillStyle=C.line;
+   for(let k=0;k<=1100;k+=50){const yy=dy(k),maj=k%100===0;hx.strokeStyle=C.line;hx.lineWidth=1.2*s;hx.beginPath();hx.moveTo(x0,yy);hx.lineTo(x0-(maj?9:5)*s,yy);hx.stroke();if(k%200===0)hx.fillText(k,x0-13*s,yy)}
+   const yd=dy(d),ax=x0+w+2*s;hx.fillStyle=C.num;hx.beginPath();hx.moveTo(ax,yd);hx.lineTo(ax+10*s,yd-7*s);hx.lineTo(ax+10*s,yd+7*s);hx.closePath();hx.fill();
+   hx.strokeStyle=C.num;hx.lineWidth=1.6*s;hx.strokeRect(ax+12*s,yd-11*s,46*s,22*s);hx.textAlign='center';hx.font=F(13,'bold');hx.fillText(d,ax+35*s,yd+1);
+   const cl=Math.round(A1.state==='run'?A1.clos:0);
+   if(Math.abs(cl)>=1){const dir=cl>0?1:-1,ln=Math.min(40,Math.abs(cl)*1.2)*s,bx=ax+35*s,sy=yd+dir*16*s,ty=sy+dir*ln;hx.strokeStyle='#fff';hx.fillStyle='#fff';hx.lineWidth=2*s;
+     hx.beginPath();hx.moveTo(bx,sy);hx.lineTo(bx,ty);hx.stroke();hx.beginPath();hx.moveTo(bx,ty+dir*6*s);hx.lineTo(bx-5*s,ty);hx.lineTo(bx+5*s,ty);hx.closePath();hx.fill()}
+   hx.direction='rtl';hx.textAlign='center';hx.font=F(11);hx.fillStyle='#fff';if(A1.state==='run')hx.fillText(`${cl>=0?'סוגר':'נפתח'} ${Math.abs(cl)} m/s`,x0+w+30*s,dB+3*s);
+   hx.font=F(13.5);hx.fillStyle=C.line;hx.fillText('מרחק מהמטוס (m)',x0+w/2,dB+19*s)}
+  // boxes
+  if(SH('thr'))box(30,412,92,439,(A1.thrCmd>0?'+':'')+A1.thrCmd.toFixed(1));if(SH('thr'))label('מצערת',61,452);
+  if(SH('angle')){box(642,421,706,448,A1.ang.toFixed(1));label('זוית',674,465)}
+  if(SH('ammo')){hx.fillStyle=C.orange;hx.fillRect(Xp(201),Yp(484),74*s*(X.gun?A1.ammo/100:1),27*s);hx.strokeStyle=C.line;hx.lineWidth=1.2*s;hx.strokeRect(Xp(201),Yp(484),74*s,27*s);
+  hx.fillStyle=C.line;hx.font=F(13.5);hx.direction='ltr';hx.textAlign='center';hx.fillText('0',Xp(192),Yp(497.5));hx.fillText('100',Xp(291),Yp(497.5));label('תחמושת',238,523);}
+  if(SH('pct'))box(366,484,440,511,X.gun&&A1.state==='run'&&A1.pNow!=null?Math.round(A1.pNow*100)+'%':'--');if(SH('pct'))label('אחוזי פגיעה',403,523);
+  // lock / fire-approval light
+  if(SH('light')){const run=A1.state==='run'&&!X.free,lk=run&&A1.ok,green=lk&&(X.gun?A1.armed:A1.hold>=X.hold),yellow=lk&&!green;
+  const lx=Xp(532),ly=Yp(484),lw=74*s,lh=27*s;
+  if(green||yellow){const col=green?'#36e04a':'#ffd400';hx.save();hx.shadowColor=col;hx.shadowBlur=18*s;hx.fillStyle=col;hx.fillRect(lx,ly,lw,lh);hx.restore();
+}
+  else{hx.fillStyle='rgba(0,0,0,.18)';hx.fillRect(lx,ly,lw,lh)}
+  hx.strokeStyle=C.line;hx.lineWidth=1.6*s;hx.strokeRect(lx,ly,lw,lh);}
+  // tutorial: highlight the gauge introduced in this lesson
+  if(X.focus){const FR={speed:[-10,128,138,398],thr:[22,404,100,462],range:[688,134,804,398],circle:[312,177,496,361],angle:[634,412,714,474],light:[524,476,614,520],pct:[358,476,448,534],ammo:[180,476,304,534]}[X.focus];
+    if(FR){const a=.55+.45*Math.sin(performance.now()/260);hx.save();hx.strokeStyle=`rgba(255,176,0,${a})`;hx.lineWidth=2.5*s;hx.setLineDash([8*s,6*s]);hx.strokeRect(Xp(FR[0]),Yp(FR[1]),(FR[2]-FR[0])*s,(FR[3]-FR[1])*s);hx.setLineDash([]);
+      hx.fillStyle='#ffb000';hx.font=F(11,'bold');hx.direction='rtl';hx.textAlign='center';hx.fillText('חדש',Xp((FR[0]+FR[2])/2),Yp(FR[1]-8));hx.restore()}}
+  if(A1.state==='ready'&&!A1.course){hx.fillStyle=C.num;hx.font=F(17,'bold');hx.direction='rtl';hx.fillText('לחץ ירי (רווח) כדי להתחיל',cx,cy+140*s)}
+  hx.fillStyle='rgba(255,255,255,.85)';hx.font='11px Arial';hx.direction='rtl';hx.textAlign='right';hx.fillText('© 2026 יניר בן שמעון · כל הזכויות שמורות',W-8,H-10);hx.fillStyle='rgba(255,255,255,.55)';hx.textAlign='left';hx.fillText('Esc – השהיה',8,H-10)
+}
+function wrapText(s,x,y,maxW,lh){const words=s.split(' ');let line='',yy=y;for(const w of words){const t=line?line+' '+w:w;if(hx.measureText(t).width>maxW&&line){hx.fillText(line,x,yy);line=w;yy+=lh}else line=t}if(line)hx.fillText(line,x,yy)}
+hud.addEventListener('click',e=>{if(game.mode==='a1'&&e.offsetX<46&&e.offsetY<46){game.paused=true;show('#pause')}});
+hud.addEventListener('mousemove',e=>{hud.style.cursor=game.mode==='a1'&&e.offsetX<46&&e.offsetY<46?'pointer':'default'});
+
+/* ================= full prep course: timed drills, scored by performance ================= */
+const QUAD={ru:['מימין למעלה',7,5],lu:['משמאל למעלה',-7,5],ld:['משמאל למטה',-7,-5],rd:['מימין למטה',7,-5],r:['מימין',9,0],l:['משמאל',-9,0],u:['למעלה',0,7],d:['למטה',0,-7]};
+const QKEYS=Object.keys(QUAD);
+const MAN={0:{},1:{turn:[.045,.035]},2:{turn:[.075,.045],climb:[12,.045]},3:{turn:[.11,.055],climb:[18,.055]},4:{turn:[.14,.065],climb:[24,.06]}};
+const SHOW_SPD=['speed','thr'],SHOW_RNG=['speed','thr','range'],SHOW_ANG=['speed','thr','range','circle','angle'],SHOW_LCK=[...SHOW_ANG,'light'],SHOW_PCT=[...SHOW_LCK,'pct'],SHOW_ALL=null;
+const sgn=()=>Math.random()<.5?-1:1;
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const winFrom=(lo,hi)=>{const st=Math.round((hi-lo)/50);return lo+50*Math.floor(Math.random()*(st+1))};
+const fmtK=v=>(v>0?'+':'')+v;
+
+/* drill text */
+function drillDesc(X,a){const q=X.quad?` המטרה מתחילה ${QUAD[X.quad][0]} – כוון אליה.`:'';const lock=X.lockStick?' הסטיק נעול – רק מצערת.':X.lockThr?' המצערת אוטומטית – רק סטיק.':'';
+  switch(X.goal){
+    case 'speed':return `החזק את מד המהירות על ${fmtK(a.spdT)} קשר (עד 6 קשר סטייה). היעד משתנה במהלך התרגיל.${lock}`;
+    case 'match':return `השווה מהירות למטרה: מד המהירות על 0 (עד 5 קשר סטייה). מדי פעם המהירות שלך תשתבש – תקן מהר.${lock}`;
+    case 'range':return `שמור מרחק ${a.lo}–${a.hi} מטר מהמטרה כמה שיותר זמן.${X.seq?' החלון משתנה במהלך התרגיל.':''}${lock}`;
+    case 'angle':return `החזק את המטרה בתוך העיגול כמה שיותר זמן.${q}${lock}`;
+    case 'track':return `החזק את המטרה בתוך העיגול ובמרחק ${a.lo}–${a.hi} מטר כמה שיותר זמן.${q}`;
+    case 'lock':return `הינעל על המטרה (עיגול + מרחק ${a.lo}–${a.hi} מ', 5 שניות) ושמור על נעילה כמה שיותר זמן.${q}`;
+    case 'pct':return `הינעל (מרחק ${a.lo}–${a.hi} מ', זווית עד ${a.angMax} מעלות) ושמור אחוזי פגיעה של ${Math.round(X.pct*100)} ומעלה כמה שיותר זמן. בלי לירות. מרבי: ${Math.round(a.maxP*100)}.${q}`;
+    case 'fire':return `הינעל (מרחק ${a.lo}–${a.hi} מ', זווית עד ${a.angMax} מעלות) וירה. יעד: ${X.need} פגיעות. אחוז פגיעה מרבי: ${Math.round(a.maxP*100)}.${q}`}
+  return ''}
+
+/* drill factory */
+function D(o){return Object.assign({time:40,start:900,hold:5,en:{},pass:o.goal==='fire'?1:.6},o)}
+function speedSeq(){const pos=shuffle([40,30,20,10]),neg=shuffle([-40,-30,-20,-10]);const v=[pos[0],neg[0],pos[1],neg[1]];if(Math.random()<.5)v.reverse();return v.map((s,k)=>({t:k*15,spd:s}))}
+function matchSeq(T){const r0=sgn()*(30+10*Math.floor(Math.random()*5));const s=[{t:0,kick:r0}];for(let t=T>50?20:14;t<T-8;t+=T>50?20:14)s.push({t,kick:sgn()*(25+5*Math.floor(Math.random()*5))});return s}
+function winSeq(T,step){const s=[];let lo=winFrom(400,700);for(let t=0;t<T-5;t+=step){s.push({t,lo});let n;do{n=winFrom(350,750)}while(Math.abs(n-lo)<150);lo=n}return s}
+
+const COURSE_MODULES=[
+ {id:'m1',name:'מד המהירות והמצערת',intro:`<p><b>מד המהירות</b> (משמאל) מראה את <b>הפרש המהירות</b> בינך לבין המטרה, בקשרים: 0 = אותה מהירות, חיובי = אתה מהיר יותר ומתקרב, שלילי = איטי יותר ומתרחק.</p>
+  <p><b>המצערת</b> (‎−10‎ עד ‎+10‎) קובעת <b>תאוצה</b>: חיובי מאיץ, שלילי מאט, ו-0 שומר על המהירות שהגעת אליה. התאוצה נבנית ודועכת בהדרגה – החזר ל-0 רגע לפני היעד.</p>
+  <p>בפרק הזה <b>הסטיק נעול</b>. מוצגים רק מד המהירות והמצערת. בכל תרגיל מוצג יעד (פס ירוק על המד) שמשתנה כל 15 שניות – הבא את המד ליעד והחזק שם.</p>`,
+  build:()=>Array.from({length:8},()=>D({goal:'speed',show:SHOW_SPD,lockStick:true,time:60,start:1600,seq:speedSeq()}))},
+ {id:'m2',name:'השוואת מהירות',intro:`<p>כדי לשמור מרחק קבוע צריך לטוס <b>באותה מהירות כמו המטרה</b> – מד המהירות על <b>0</b>.</p>
+  <p>בכל תרגיל אתה מתחיל מהר או לאט מהמטרה, ומדי פעם המהירות שלך "תשתבש" בפתאומיות (כמו מערבולת). המשימה: להחזיר את המד ל-0 מהר ובלי לעבור הרבה לצד השני. הסטיק עדיין נעול.</p>
+  <p>טיפ: תיקון חזק בהתחלה, ואז מצערת חזרה ל-0 כשהמד במרחק 5–8 קשר מהיעד.</p>`,
+  build:()=>[...Array.from({length:4},()=>D({goal:'match',show:SHOW_SPD,lockStick:true,time:60,start:1500,seq:matchSeq(60)})),...Array.from({length:6},()=>D({goal:'match',show:SHOW_SPD,lockStick:true,time:40,start:1500,seq:matchSeq(40)}))]},
+ {id:'m3',name:'מד המרחק – שמירת מרחק',intro:`<p><b>מד המרחק</b> (מימין) מראה כמה מטרים אתה מהמטרה. האזור הירוק הוא <b>חלון היעד</b> – תמיד ברוחב 200 מ'. החץ הלבן מראה אם המרחק נסגר או נפתח.</p>
+  <p>הדרך: האץ מעט כדי להתקרב (או האט כדי להתרחק), ולפני שמגיעים לחלון השווה מהירות (מד מהירות על 0) – אז המרחק נעצר בתוך החלון.</p>
+  <p>הסטיק נעול. הציון הוא אחוז הזמן שהיית בתוך החלון – לכן חשוב להגיע מהר אבל בלי לעבור אותו.</p>`,
+  build:()=>[...Array.from({length:4},()=>D({goal:'range',show:SHOW_RNG,lockStick:true,time:60,win:[400,700],start:[250,1300,300,1200][Math.floor(Math.random()*4)]})),
+    ...Array.from({length:8},()=>D({goal:'range',show:SHOW_RNG,lockStick:true,time:40,win:[350,750],start:[200,1300,1100,250,1400][Math.floor(Math.random()*5)]}))]},
+ {id:'m4',name:'שינוי חלון מרחק',intro:`<p>עכשיו החלון <b>זז</b> במהלך התרגיל: כל כמה שניות מופיע חלון חדש (קרוב או רחוק יותר), וצריך לעבור אליו ולעצור בו.</p>
+  <p>זה מאמן תכנון: כמה להאיץ, מתי להתחיל להאט, ואיך לעצור בלי לעבור את החלון. הסטיק עדיין נעול.</p>`,
+  build:()=>[...Array.from({length:4},()=>D({goal:'range',show:SHOW_RNG,lockStick:true,time:60,start:900,seq:winSeq(60,20)})),...Array.from({length:6},()=>D({goal:'range',show:SHOW_RNG,lockStick:true,time:40,start:900,seq:winSeq(40,14)}))]},
+ {id:'m5',name:'הכוונת והזווית',intro:`<p><b>העיגול</b> במרכז הוא אזור המטרה, והצלב הוא מרכז הכוונת. תיבת <b>זוית</b> מראה בכמה מעלות המטרה רחוקה מהמרכז.</p>
+  <p>בפרק הזה <b>המצערת אוטומטית</b> (המרחק נשמר לבד) ואתה עובד רק עם הסטיק. בכל תרגיל המטרה מתחילה במקום אחר – מימין למעלה, משמאל למטה וכו' – ואחר כך מתמרנת.</p>
+  <p>כדי לפנות: גלגל לכיוון המטרה ומשוך מעט. תנועות קטנות ורגועות; אם המטרה "קופצת" לצד השני – תיקנת חזק מדי.</p>`,
+  build:()=>{const q=shuffle([...QKEYS,...QKEYS]);return [...q.slice(0,8).map((k,i)=>D({goal:'angle',show:SHOW_ANG,lockThr:true,time:60,start:600,quad:k,en:MAN[i<4?0:1]})),...q.slice(8).map(k=>D({goal:'angle',show:SHOW_ANG,lockThr:true,time:40,start:600,quad:k,en:MAN[2]}))]}},
+ {id:'m6',name:'מעקב – מרחק וזווית יחד',intro:`<p>עכשיו הכל פתוח: סטיק ומצערת יחד. צריך להחזיק את המטרה <b>בתוך העיגול</b> וגם <b>בחלון המרחק</b>.</p>
+  <p>המטרה מתחילה בכל פעם במקום אחר ומתמרנת – בהמשך הפרק יותר מהרגיל. סדר עבודה מומלץ: קודם כוון (סטיק), תוך כדי התאם מהירות, ואז תקן מרחק.</p>`,
+  build:()=>shuffle([...QKEYS,...QKEYS.slice(0,4)]).map((k,i)=>D({goal:'track',show:SHOW_ANG,time:40,start:winFrom(500,1100),win:[400,700],quad:k,en:MAN[i<4?1:i<8?2:3]}))},
+ {id:'m7',name:'הינעלות',intro:`<p>כשהמטרה <b>גם בעיגול וגם בחלון המרחק</b> מתחילה נעילה: <b>נורה צהובה</b>. אחרי <b>5 שניות ברצף</b> – <b>נורה ירוקה</b>: ננעלת. יציאה מתנאי אחד מאפסת את הנעילה.</p>
+  <p>הציון בפרק הזה הוא אחוז הזמן שהיית <b>נעול (ירוק)</b> – כלומר להינעל מהר ולשמור על הנעילה. המטרה מתמרנת יותר מהרגיל.</p>`,
+  build:()=>shuffle([...QKEYS,...QKEYS.slice(0,4)]).map((k,i)=>D({goal:'lock',show:SHOW_LCK,time:40,start:winFrom(500,1000),win:[350,700],quad:k,en:MAN[i<4?2:3],pass:.4}))},
+ {id:'m8',name:'אחוזי פגיעה',intro:`<p>אחרי נעילה, תיבת <b>אחוזי פגיעה</b> מציגה את סיכוי הפגיעה עכשיו. בתרגילי הירי יש גם <b>זווית מקסימלית</b> (2–3.5 מעלות) – העיגול מצטייר לפי הזווית הזו.</p>
+  <p>לכל תרגיל יש <b>אחוז מרבי</b> לפי חלון המרחק (כ-83 בחלון 300–500, 69 ב-400–600, 55 ב-500–700) – אי אפשר לעבור אותו. מתחת למרבי הסיכוי יורד לפי: <b>זווית</b> (רק במרכז מקבלים את המרבי), <b>מרחק בתוך החלון</b> (הקצה הקרוב עדיף) ו<b>יציבות</b> (מד מהירות קרוב ל-0).</p>
+  <p>הציון: אחוז הזמן שהסיכוי היה מעל היעד שבהוראות. עדיין בלי לירות.</p>`,
+  build:()=>shuffle([...QKEYS,'r','l']).map((k,i)=>D({goal:'pct',gun:true,noFire:true,pct:i<5?.45:.5,show:SHOW_PCT,time:40,start:winFrom(450,900),win:[300,500],quad:k,en:MAN[i<5?1:2],pass:.35}))},
+ {id:'m9',name:'ירי',intro:`<p>אפשר לירות <b>רק כשהנורה ירוקה</b>. החזקת כפתור הירי יורה צרור – 10 פגזים בשנייה, וכל פגז פוגע לפי אחוזי הפגיעה באותו רגע.</p>
+  <p>בר <b>התחמושת</b> מראה כמה פגזים נשארו מתוך 100. הציון בכל תרגיל הוא מספר הפגיעות ביחס ליעד שבהוראות.</p>
+  <p>טיפ: אל תבזבז פגזים כשהאחוז נמוך – קודם מרכז את המטרה, ואז ירה.</p>`,
+  build:()=>shuffle([...QKEYS,...QKEYS.slice(0,4)]).map((k,i)=>D({goal:'fire',gun:true,need:i<6?12:15,show:SHOW_ALL,time:40,start:winFrom(500,1000),win:[300,600],quad:k,en:MAN[i<6?1:2]}))},
+ {id:'m10',name:'הכל ביחד',intro:`<p>הפרק האחרון: כל המדדים יחד, עם מטרה שמתמרנת <b>יותר מהרגיל</b> ומתחילה בכל פעם בכיוון אחר.</p>
+  <ol><li>כוון אל המטרה.</li><li>השווה מהירות והיכנס לחלון המרחק.</li><li>החזק בעיגול עד נורה ירוקה.</li><li>ירה כשאחוזי הפגיעה גבוהים, ותקן כל הזמן.</li></ol>`,
+  build:()=>shuffle([...QKEYS,...QKEYS.slice(0,6)]).map((k,i)=>D({goal:'fire',gun:true,need:i<7?15:18,show:SHOW_ALL,time:40,start:winFrom(500,1100),win:[300,650],quad:k,en:MAN[i<7?3:4]}))}];
+
+/* practice hour and final exam */
+const PRACTICE_TYPES=[
+ ()=>D({goal:'match',show:SHOW_SPD,lockStick:true,start:1500,seq:matchSeq(40)}),
+ ()=>D({goal:'range',show:SHOW_RNG,lockStick:true,start:900,seq:winSeq(40,14)}),
+ ()=>D({goal:'angle',show:SHOW_ANG,lockThr:true,start:600,quad:pick(QKEYS),en:MAN[3]}),
+ ()=>D({goal:'track',show:SHOW_ANG,start:winFrom(500,1100),win:[400,700],quad:pick(QKEYS),en:MAN[3]}),
+ ()=>D({goal:'lock',show:SHOW_LCK,start:winFrom(500,1000),win:[350,700],quad:pick(QKEYS),en:MAN[3],pass:.4}),
+ ()=>D({goal:'fire',gun:true,need:15,show:SHOW_ALL,start:winFrom(500,1100),win:[300,650],quad:pick(QKEYS),en:MAN[3]}),
+ ()=>D({goal:'fire',gun:true,need:18,show:SHOW_ALL,start:winFrom(500,1100),win:[300,650],quad:pick(QKEYS),en:MAN[4]})];
+const EXAM_TYPES=[['השוואת מהירות',0],['שינוי חלון מרחק',1],['כוונת וזווית',2],['מעקב מרחק וזווית',3],['הינעלות',4],['ירי',5]];
+function buildPractice(){const out=[];for(let k=0;k<78;k++){const d=PRACTICE_TYPES[k%PRACTICE_TYPES.length]();out.push(d)}return shuffle(out).map((d,i)=>Object.assign(d,{mod:'practice',modName:'תרגול – שעה',name:'תרגיל '+(i+1)}))}
+function buildExam(){const out=[];for(let r=0;r<4;r++)for(const [nm,ti] of EXAM_TYPES){const d=PRACTICE_TYPES[ti]();d.en=MAN[ti>=2?3:0];if(d.quad)d.quad=pick(QKEYS);out.push(Object.assign(d,{mod:'exam',modName:'מבחן מסכם',name:nm,examType:nm}))}return out}
+function buildCourse(fromMod){const out=[];COURSE_MODULES.forEach((m,mi)=>{if(mi<(fromMod||0))return;m.build().forEach((d,k,arr)=>out.push(Object.assign(d,{mod:m.id,modIdx:mi,modName:m.name,name:`${m.name} – ${k+1}`,kInMod:k,nInMod:arr.length,intro:k===0?m.intro:null,focus:k<2?{m1:'speed',m2:'thr',m3:'range',m4:'range',m5:'circle',m6:null,m7:'light',m8:'pct',m9:'ammo',m10:null}[m.id]:null})))});return out}
+const courseMinutes=()=>{let s=0,n=0;COURSE_MODULES.forEach(m=>m.build().forEach(d=>{s+=d.time+6;n++}));return {min:Math.round((s+COURSE_MODULES.length*75)/60),n}};
+
+/* progress (saved on this computer) */
+const CPK='yarpaA_course_v1';
+const cLoad=()=>{try{return JSON.parse(localStorage.getItem(CPK))||{mods:{}}}catch(e){return {mods:{}}}};
+const cSave=o=>{try{localStorage.setItem(CPK,JSON.stringify(o))}catch(e){}};
+
+/* run */
+function startCourse(kind,fromMod){const list=kind==='practice'?buildPractice():kind==='exam'?buildExam():buildCourse(fromMod);
+  game.diff='normal';game.practice=true;game.flow='course';game.res={viol:{}};game.courseKind=kind;
+  startA1(null,list);}
+function prepCourse(){const X=A1.list[A1.i],hdg=rr(0,2*Math.PI),alt=2700,f=[Math.sin(hdg),0,-Math.cos(hdg)];
+  Object.assign(A1,{state:'count',cd:3,t:0,hold:0,out:0,armed:false,ammo:100,shots:0,hits:0,pSum:0,pNow:null,gunT:0,trigLock:true,hitFx:0,onT:0,best:0,wait:0,
+    hdg0:hdg,alt0:alt,ang:0,clos:0,relKt:0,ok:false,cond:false,why:'',seg:null,spdT:0,respawns:0,zIn:A1.zIn||5,zArc:A1.zArc||3.2});show(null);
+  if(X.win){A1.lo=winFrom(X.win[0],X.win[1]-200);A1.hi=A1.lo+200}else if(X.seq&&X.seq[0].lo!=null){A1.lo=X.seq[0].lo;A1.hi=A1.lo+200}else{A1.lo=A1.hi=null}
+  A1.angMax=X.gun?(X.ang||pick([2,2.5,3,3.5])):null;A1.maxP=X.gun&&A1.lo!=null?a1HitP((A1.lo+A1.hi)/2):null;
+  if(X.seq&&X.seq[0].spd!=null)A1.spdT=X.seq[0].spd;
+  A1.en={p:[0,alt,0],hdg,v:200,t:rr(0,40),f,u:[0,1,0],r:cross(f,[0,1,0])};
+  const d=X.start;A1.dist=d;
+  game.P=makePlane([-f[0]*d,alt-(X.lockStick?14:0),-f[2]*d],hdg,200);game.P.thr=.5;IN.kbT=.5;A1.thrAct=0;A1.thrCmd=0;A1.acc=0;if(IN.src==='pad')IN.lastT=null;
+  if(X.quad){const q=QUAD[X.quad],P=game.P,h=Math.tan(q[1]*DEG)*d,v=Math.tan(q[2]*DEG)*d;A1.en.p=add(add(add(P.p,scl(P.f,d)),scl(P.r,h)),scl(P.u,v))}
+  if(X.seq&&X.seq[0].kick!=null){game.P.v=A1.en.v+X.seq[0].kick/KT;A1.seg=X.seq[0]}
+  const pr=cLoad();pr.pos={kind:A1.course,i:A1.i,mod:X.mod,modIdx:X.modIdx};if(A1.course==='course')cSave(pr);
+  if(X.intro){courseCard(`פרק ${X.modIdx+1} מתוך ${COURSE_MODULES.length}`,X.modName,X.intro,`${X.nInMod} תרגילים, ${X.time===60?'הראשונים של דקה, השאר של 40 שניות':'40 שניות כל אחד'}. בכל תרגיל הציון הוא ${X.goal==='fire'?'מספר הפגיעות ביחס ליעד':'אחוז הזמן שעמדת במשימה'}.`,'התחל את הפרק (ירי)',true)}
+}
+function courseGo(){if(A1.state==='card'){show(null);A1.state='count';A1.cd=3;SND.click()}else if(A1.state==='summary'){show(null);const f=A1.afterSummary;A1.afterSummary=null;if(f)f()}}
+function courseCard(step,title,body,task,goLabel,canSkip){A1.state='card';
+  const n=COURSE_MODULES.length,cur=A1.list[A1.i]&&A1.list[A1.i].modIdx;
+  $('#lprog').innerHTML=A1.course==='course'?COURSE_MODULES.map((m,k)=>`<i class="${k<cur?'done':k===cur?'cur':''}"></i>`).join(''):'';
+  $('#lstep').textContent=step;$('#ltitle').textContent=title;$('#lbody').innerHTML=body;$('#ltask').textContent=task;$('#ltask').parentElement.style.display=task?'':'none';
+  $('#lgo').textContent=goLabel;$('#lskip').style.display=canSkip?'':'none';$('#lskip').textContent='דלג לפרק הבא';show('#lesson')}
+function courseRespawn(why){const X=A1.list[A1.i],P=game.P,d=A1.lo!=null?A1.hi+150:700;A1.respawns++;
+  A1.en.hdg=Math.atan2(P.f[0],-P.f[2]);A1.en.f=norm([P.f[0],0,P.f[2]]);A1.en.p=add(P.p,scl(A1.en.f,d));A1.en.p[1]=P.p[1];A1.hold=0;A1.armed=false;banner(why,1300,'#ffb000')}
+function updCourse(dt){const X=A1.list[A1.i],P=game.P;A1.hitFx=Math.max(0,A1.hitFx-dt);
+  if(A1.state==='card'||A1.state==='summary'){if(IN.just.has('fire')){IN.just.delete('fire');courseGo()}return}
+  if(A1.state==='count'){A1.cd-=dt;if(A1.cd<=0){A1.state='run';SND.click()}return}
+  if(A1.state==='wait'){A1.wait-=dt;if(A1.wait<=0)courseNext();return}
+  A1.t+=dt;game.t=A1.t;
+  if(X.seq){let sg=null;for(const q of X.seq)if(q.t<=A1.t)sg=q;if(sg&&sg!==A1.seg){A1.seg=sg;
+    if(sg.lo!=null){A1.lo=sg.lo;A1.hi=sg.lo+200}if(sg.spd!=null)A1.spdT=sg.spd;if(sg.kick!=null)P.v=A1.en.v+sg.kick/KT;if(sg.t>0){SND.tone();banner(sg.kick!=null?'שיבוש מהירות!':sg.lo!=null?`חלון חדש: ${A1.lo}–${A1.hi}`:`יעד חדש: ${fmtK(A1.spdT)}`,1300,'#ffd27a')}}}
+  const sr=IN.roll,sp=IN.pitch;if(X.lockStick){IN.roll=0;IN.pitch=0}
+  flyA1(P,dt);IN.roll=sr;IN.pitch=sp;
+  if(X.lockStick){P.f=norm([P.f[0],0,P.f[2]]);P.u=[0,1,0];ortho(P)}
+  updEnemyA1(dt);
+  if(X.lockStick){const ef=norm([A1.en.f[0],0,A1.en.f[2]]);P.f=ef;P.u=[0,1,0];ortho(P)}
+  if(X.lockThr){P.v=A1.en.v;A1.acc=0;A1.thrCmd=0}
+  const rel=sub(A1.en.p,P.p),dist=len(rel),ang=Math.acos(clamp(dot(norm(rel),P.f),-1,1))/DEG;
+  A1.clos=(A1.dist-dist)/dt;A1.dist=dist;A1.ang=ang;A1.relKt=(P.v-A1.en.v)*KT;
+  if(ang>95&&dist<1500){courseRespawn('עברת את המטרה');return}
+  if(dist>3000){courseRespawn('איבדת את המטרה');return}
+  if(dist<40){flash();courseRespawn('התנגשות');return}
+  if(X.lockStick&&ang>2){/* keep the target straight ahead in throttle-only drills */const fw=norm([P.f[0],0,P.f[2]]);A1.en.p=add(add(P.p,scl(fw,dist)),[0,A1.en.p[1]-P.p[1],0])}
+  const zone=X.gun?A1.angMax:A1.zIn,inRange=A1.lo!=null&&dist>=A1.lo&&dist<=A1.hi;
+  A1.ok=X.goal==='speed'?Math.abs(A1.relKt-A1.spdT)<=6:X.goal==='match'?Math.abs(A1.relKt)<=5:X.goal==='range'?inRange:X.goal==='angle'?ang<zone:inRange&&ang<zone;
+  if(A1.ok){A1.out=0;A1.hold+=dt}else{A1.out+=dt;if(A1.out>.3){A1.hold=0;if(A1.armed){A1.armed=false;SND.tone()}}}
+  if(['lock','pct','fire'].includes(X.goal)&&!A1.armed&&A1.hold>=X.hold){A1.armed=true;SND.ok()}
+  if(X.gun){if(A1.armed&&A1.ok){const fd=1-.3*clamp((dist-A1.lo)/(A1.hi-A1.lo),0,1),fa=Math.max(0,1-.85*Math.pow(ang/zone,.8)),fs=clamp(1-(Math.abs(A1.relKt)-5)/50,.5,1);A1.pNow=Math.min(A1.maxP,A1.maxP*fd*fa*fs)}else A1.pNow=null}
+  A1.cond=X.goal==='lock'?A1.armed&&A1.ok:X.goal==='pct'?A1.pNow!=null&&A1.pNow>=X.pct:X.goal==='fire'?false:A1.ok;
+  if(A1.cond)A1.onT+=dt;
+  if(X.goal==='fire'){if(!IN.act.fire)A1.trigLock=false;
+    if(IN.act.fire&&!A1.trigLock&&A1.ammo>0&&A1.pNow!=null){A1.gunT-=dt;while(A1.gunT<=0&&A1.ammo>0){A1.gunT+=.1;A1.ammo--;A1.shots++;const hit=Math.random()<A1.pNow;if(hit){A1.hits++;A1.hitFx=.12}beep(hit?880:300,.035,'square',.025)}}else A1.gunT=0}
+  if(A1.t>=X.time)courseDrillEnd()}
+function courseScore(){const X=A1.list[A1.i];return X.goal==='fire'?Math.min(1,A1.hits/X.need):clamp(A1.onT/X.time,0,1)}
+function courseDrillEnd(){const X=A1.list[A1.i],sc=courseScore(),ok=sc>=X.pass;
+  A1.res.push({name:X.name,mod:X.mod,modName:X.modName,examType:X.examType,score:sc,passed:ok,att:1,t:X.time,best:0,on:A1.onT/X.time,acc:X.gun&&A1.shots?A1.hits/A1.shots:null,hits:X.goal==='fire'?A1.hits:null,need:X.need||null});
+  A1.state='wait';A1.wait=2.6;A1.why=`${X.goal==='fire'?`${A1.hits}/${X.need} פגיעות`:`ביצוע ${Math.round(sc*100)}%`}`;
+  SND[ok?'ok':'err']();banner(A1.why,2200,ok?'#8dffad':'#ffb000')}
+function courseNext(){const X=A1.list[A1.i],nx=A1.list[A1.i+1];
+  if(!nx||nx.mod!==X.mod){courseModuleSummary(X.mod,!nx);return}
+  A1.i++;prepCourse()}
+function courseModuleSummary(mod,last){const rs=A1.res.filter(r=>r.mod===mod),avg=rs.reduce((a,r)=>a+r.score,0)/Math.max(1,rs.length),X=A1.list[A1.i];
+  if(A1.course==='course'){const pr=cLoad();pr.mods[mod]={avg,date:Date.now(),n:rs.length};pr.pos=last?null:{kind:'course',modIdx:X.modIdx+1};cSave(pr)}
+  if(last){finishA1();return}
+  const rows=rs.map((r,k)=>`<tr><td>${k+1}</td><td>${r.hits!=null?`${r.hits}/${r.need} פגיעות`:Math.round(r.score*100)+'%'}</td><td class="${r.passed?'pos':'neg'}">${r.passed?'✓':'✗'}</td></tr>`).join('');
+  A1.state='summary';
+  courseCard('סיכום פרק',X.modName,`<p>ממוצע הפרק: <b>${Math.round(avg*100)}%</b></p><table><tr><th>#</th><th>ביצוע</th><th></th></tr>${rows}</table>`,'','המשך לפרק הבא (ירי)',false);A1.state='summary';
+  A1.afterSummary=()=>{A1.i++;prepCourse()}}
+function courseSkipModule(){const X=A1.list[A1.i];let j=A1.i;while(j<A1.list.length&&A1.list[j].mod===X.mod)j++;if(j>=A1.list.length){show(null);finishA1();return}A1.i=j;prepCourse()}
+function courseDebriefHTML(r){const res=r.a1.res;if(!res.length)return '<h3>לא הושלמו תרגילים</h3>';
+  const groups={};res.forEach(x=>{const k=r.a1.course==='exam'?x.examType:x.modName;(groups[k]=groups[k]||[]).push(x)});
+  const tot=res.reduce((a,x)=>a+x.score,0)/res.length,grade=Math.round(tot*100);
+  const title=r.a1.course==='exam'?'מבחן מסכם – תוצאות':r.a1.course==='practice'?'תרגול – סיכום':'קורס הכנה – סיכום';
+  const gr=grade>=80?['מצוין','#2b5e2e']:grade>=65?['טוב','#3c5a1f']:grade>=50?['גבולי','#6a4a00']:['דורש שיפור','#6a1a14'];
+  return `<h3>${title}</h3><div><span class="score">${grade}</span><span class="grade" style="background:${gr[1]}">${gr[0]}</span></div>
+   <table><tr><th>${r.a1.course==='exam'?'סוג תרגיל':'פרק'}</th><th>תרגילים</th><th>ממוצע</th><th>עברו</th></tr>${Object.entries(groups).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v.length}</td><td>${Math.round(v.reduce((a,x)=>a+x.score,0)/v.length*100)}%</td><td>${v.filter(x=>x.passed).length}/${v.length}</td></tr>`).join('')}</table>
+   <p class="note">הציון הוא ממוצע הביצוע בכל התרגילים: בתרגילי מעקב – אחוז הזמן שעמדת במשימה; בתרגילי ירי – הפגיעות ביחס ליעד. הציון הוא הערכה של הסימולטור בלבד.</p>`}
+function showCourseMenu(){const pr=cLoad(),cm=courseMinutes();
+  $('#cmodules').innerHTML=COURSE_MODULES.map((m,k)=>{const ds=m.build(),mins=Math.round((ds.reduce((a,d)=>a+d.time+6,0)+75)/60),st=pr.mods[m.id];
+    return `<tr><td class="mono">${String(k+1).padStart(2,'0')}</td><td>${m.name}</td><td>${ds.length}</td><td>~${mins} דק'</td><td>${st?`<span class="pos">${Math.round(st.avg*100)}%</span>`:'—'}</td><td><button class="btn sm" data-cmod="${k}">התחל</button></td></tr>`}).join('');
+  $('#cinfo').textContent=`${COURSE_MODULES.length} פרקים · ${cm.n} תרגילים · כ-${Math.floor(cm.min/60)} שעות ו-${cm.min%60} דקות`;
+  const pos=pr.pos;$('#cresume').style.display=pos&&pos.kind==='course'&&pos.modIdx<COURSE_MODULES.length?'':'none';
+  if(pos&&pos.kind==='course'&&pos.modIdx<COURSE_MODULES.length)$('#cresume').textContent=`המשך מפרק ${pos.modIdx+1} – ${COURSE_MODULES[pos.modIdx].name}`;
+  game.mode='menu';show('#courseMenu')}
+
+/* ================= rendering ================= */
+function render(){resize();const P=game.P;gl.viewport(0,0,glc.width,glc.height);gl.clearColor(FOG[0],FOG[1],FOG[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  if(!P)return;gl.useProgram(prog);const eye=add(P.p,scl(P.u,1));
+  VPm=mmul(perspective(FOV,glc.width/glc.height,4,30000),lookAt(eye,add(eye,P.f),P.u));
+  gl.uniformMatrix4fv(U.uVP,false,VPm);gl.uniform3fv(U.uLight,LIGHT);gl.uniform3fv(U.uFog,FOG);gl.uniform3fv(U.uCam,eye);
+  gl.uniform2f(U.uFogR,1e8,2e8);gl.depthMask(false);draw(MESH.sky,tsM(eye,20000),[1,1,1],1);gl.depthMask(true);
+  gl.uniform2f(U.uFogR,6500,24000);draw(MESH.terrain,tsM([0,0,0],1));
+  if(game.mode==='s1'||(game.mode==='wait'&&S1&&S1.lead)){const L=S1.lead;draw(MESH.jet,basisM(L.p,L.r,L.u,L.f,1.3))}
+  if(game.mode==='s2'||(game.mode==='wait'&&S2&&S2.fx)){const M=S2,pr=game.practice;
+    for(const t of M.targets){const col=t.dead?[.18,.16,.14]:pr?(t.pri?[1,.25,.2]:[.3,.55,1]):[.88,.86,.8];draw(MESH.sphere,tsM(t.p,t.dead?50:42,t.dead?12:42),col)}
+    for(const s of M.sams)draw(MESH.cone,tsM(s.p,38,95),pr?[1,.85,.1]:[.86,.78,.36]);
+    for(const e of M.enemies)if(e.alive){const fr=frameFromDir(e.f);draw(MESH.jet,basisM(e.p,fr.r,fr.u,e.f,1.8),[.75,.35,.3])}
+    for(const m of M.missiles){const fr=frameFromDir(m.f);draw(MESH.box,basisM(m.p,fr.r,fr.u,m.f,1),[1,1,.9],1)}
+    for(const b of M.bombs){const fr=frameFromDir(norm(b.v));draw(MESH.box,new Float32Array([...scl(fr.r,.5),0,...scl(fr.u,.5),0,...scl(fr.f,2),0,...b.p,1]),[.2,.2,.2])}
+    for(const f of M.fx){const k=f.t/f.dur;draw(MESH.sphere,tsM(f.p,f.size*(.3+k)),scl(f.col,1-k*.6),1)}
+    if(pr){for(let i=0;i<M.route.length;i++){const p=M.route[i];draw(MESH.cone,tsM([p[0],groundAt(p[0],p[2]),p[2]],25,i===M.wp?500:220),i===M.wp?[.2,1,.4]:[1,1,1],.6)}}}
+}
+const HG='#43ff74';
+function txt(s,x,y,al='center',rtl=false,font){hx.direction=rtl?'rtl':'ltr';hx.textAlign=al;if(font)hx.font=font;hx.fillText(s,x,y)}
+function drawHUD(){const W=hud.clientWidth,H=hud.clientHeight;hx.setTransform(DPR,0,0,DPR,0,0);hx.clearRect(0,0,W,H);const P=game.P;if(!P||!VPm)return;
+  const cx=W/2,cy=H/2,foc=(H/2)/Math.tan(FOV/2),ppd=foc*DEG,F='bold 15px Consolas,monospace';
+  hx.strokeStyle=HG;hx.fillStyle=HG;hx.lineWidth=1.7;hx.font=F;hx.shadowColor='rgba(0,0,0,.85)';hx.shadowBlur=3;hx.textBaseline='middle';
+  const pitch=pitchOf(P)/DEG,roll=rollOf(P),hdg=hdgOf(P.f);
+  hx.save();hx.beginPath();hx.rect(cx-W*.24,cy-H*.38,W*.48,H*.76);hx.clip();hx.translate(cx,cy);hx.rotate(-roll);
+  for(let d=-90;d<=90;d+=5){const y=(pitch-d)*ppd;if(Math.abs(y)>H*.62)continue;const w=d===0?W*.2:d%10===0?70:34,gp=d===0?40:30;
+    hx.setLineDash(d<0?[8,6]:[]);hx.beginPath();hx.moveTo(-gp-w,y);hx.lineTo(-gp,y);hx.moveTo(gp,y);hx.lineTo(gp+w,y);
+    if(d!==0){const tk=d>0?9:-9;hx.moveTo(-gp-w,y);hx.lineTo(-gp-w,y+tk);hx.moveTo(gp+w,y);hx.lineTo(gp+w,y+tk)}hx.stroke();
+    if(d!==0&&d%10===0){hx.setLineDash([]);txt(Math.abs(d),gp+w+16,y);txt(Math.abs(d),-gp-w-16,y)}}
+  hx.setLineDash([]);hx.restore();
+  // roll scale
+  hx.beginPath();hx.arc(cx,cy,H*.33,Math.PI/2-1.05,Math.PI/2+1.05);hx.stroke();
+  for(const a of[-60,-45,-30,-20,-10,0,10,20,30,45,60]){const r=H*.33,t=Math.PI/2+a*DEG,l=a%30===0?14:8;hx.beginPath();hx.moveTo(cx+Math.cos(t)*r,cy+Math.sin(t)*r);hx.lineTo(cx+Math.cos(t)*(r+l),cy+Math.sin(t)*(r+l));hx.stroke()}
+  {const t=Math.PI/2-roll,r=H*.33-4;hx.beginPath();hx.moveTo(cx+Math.cos(t)*r,cy+Math.sin(t)*r);hx.lineTo(cx+Math.cos(t-.04)*(r-14),cy+Math.sin(t-.04)*(r-14));hx.lineTo(cx+Math.cos(t+.04)*(r-14),cy+Math.sin(t+.04)*(r-14));hx.closePath();hx.fill()}
+  // boresight
+  hx.beginPath();hx.moveTo(cx-26,cy);hx.lineTo(cx-10,cy);hx.lineTo(cx-5,cy+8);hx.lineTo(cx,cy);hx.lineTo(cx+5,cy+8);hx.lineTo(cx+10,cy);hx.lineTo(cx+26,cy);hx.stroke();
+  // heading tape
+  const ty=30;hx.beginPath();for(let d=-30;d<=30;d++){const v=Math.round(hdg)+d;if(v%5)continue;const x=cx+(v-hdg)*6;if(Math.abs(x-cx)>180)continue;hx.moveTo(x,ty+10);hx.lineTo(x,ty+(v%10?16:20));
+    if(v%10===0)txt(String(((v%360)+360)%360/10|0).padStart(2,'0'),x,ty)}hx.stroke();
+  hx.beginPath();hx.moveTo(cx,ty+24);hx.lineTo(cx-6,ty+32);hx.lineTo(cx+6,ty+32);hx.closePath();hx.fill();txt(String(Math.round(hdg)%360).padStart(3,'0'),cx,ty+44);
+  // speed & alt boxes
+  const sx=cx-W*.3,ax=cx+W*.3;hx.strokeRect(sx-46,cy-16,92,32);hx.strokeRect(ax-56,cy-16,112,32);
+  txt(Math.round(P.v*KT),sx,cy,'center',false,'bold 20px Consolas,monospace');hx.font=F;txt('KT',sx,cy-30);
+  const g=groundAt(P.p[0],P.p[2]),agl=(P.p[1]-g)*FT;
+  if(game.mode==='s2'){txt('R'+String(Math.round(agl)).padStart(5,' '),ax,cy,'center',false,'bold 20px Consolas,monospace');hx.font=F;txt('MSL '+Math.round(P.p[1]*FT),ax,cy+30);txt('AGL FT',ax,cy-30)}
+  else{txt(Math.round(P.p[1]*FT),ax,cy,'center',false,'bold 20px Consolas,monospace');hx.font=F;txt('ALT FT',ax,cy-30);txt('R '+Math.round(agl),ax,cy+30)}
+  txt('THR '+Math.round(P.thr*100)+'%',sx,cy+30);txt('G '+(1/Math.max(.2,Math.cos(rollOf(P)))).toFixed(1),sx,cy+50);
+  if(game.mode==='s1')hudS1(W,H,cx,cy,foc);else if(game.mode==='s2')hudS2(W,H,cx,cy,foc);
+  hx.shadowBlur=0}
+function edgeArrow(p,cx,cy,W,H){const P=game.P,rel=sub(p,P.p),dx=dot(rel,P.r),dy=dot(rel,P.u),a=Math.atan2(-dy,dx),r=Math.min(W,H)*.4;
+  const x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r;hx.save();hx.translate(x,y);hx.rotate(a);hx.beginPath();hx.moveTo(16,0);hx.lineTo(-8,-10);hx.lineTo(-8,10);hx.closePath();hx.fill();hx.restore()}
+function hudS1(W,H,cx,cy,foc){const C=S1L[S1.lvl],L=S1.lead;
+  const rad=foc*Math.tan(C.ang*DEG);hx.strokeStyle=S1.ok?'#8dffad':HG;hx.lineWidth=S1.ok?2.6:1.7;hx.beginPath();hx.arc(cx,cy,rad,0,7);hx.stroke();hx.lineWidth=1.7;hx.strokeStyle=HG;
+  const sp=project(L.p);if(sp&&sp[0]>0&&sp[0]<W&&sp[1]>0&&sp[1]<H){hx.strokeRect(sp[0]-16,sp[1]-16,32,32);txt(Math.round(S1.dist)+' m',sp[0],sp[1]+28)}else edgeArrow(L.p,cx,cy,W,H);
+  // range bar
+  const bx=W-60,by0=cy-130,bh=260,rng=[0,600],ry=v=>by0+bh-(clamp(v,rng[0],rng[1])/rng[1])*bh;
+  hx.strokeRect(bx-8,by0,16,bh);hx.fillStyle='rgba(67,255,116,.25)';hx.fillRect(bx-8,ry(S1.target+C.band),16,ry(S1.target-C.band)-ry(S1.target+C.band));hx.fillStyle=HG;
+  hx.beginPath();hx.moveTo(bx-12,ry(S1.target));hx.lineTo(bx+12,ry(S1.target));hx.stroke();
+  const my=ry(S1.dist);hx.beginPath();hx.moveTo(bx-12,my);hx.lineTo(bx-26,my-8);hx.lineTo(bx-26,my+8);hx.closePath();hx.fill();
+  txt('רחוק',bx,by0-14,'center',true,'bold 13px Arial');txt('קרוב',bx,by0+bh+14,'center',true);txt(Math.round(S1.dist),bx-40,my,'right',false,'bold 14px Consolas,monospace');
+  // hold progress
+  const pw=280,px=cx-pw/2,py=H-62;hx.strokeRect(px,py,pw,14);hx.fillRect(px,py,pw*clamp(S1.hold/C.hold,0,1),14);
+  txt(`החזקה ${S1.hold.toFixed(1)} / ${C.hold} שנ'`,cx,py-14,'center',true,'bold 14px Arial');
+  for(let i=0;i<3;i++){hx.beginPath();hx.arc(cx-24+i*24,py+34,7,0,7);i<S1.succ?hx.fill():hx.stroke()}
+  if(S1.dist<120){hx.fillStyle='#ff6b60';txt('קרוב מדי!',cx,cy+80,'center',true,'bold 20px Arial');hx.fillStyle=HG}}
+function hudS2(W,H,cx,cy,foc){const M=S2,P=game.P;
+  for(const e of M.enemies){if(!e.alive||e.rng>12000)continue;const sp=project(e.p);if(!sp){continue}
+    if(M.lock===e){hx.strokeStyle='#ff6b60';hx.fillStyle='#ff6b60';hx.beginPath();hx.arc(sp[0],sp[1],22,0,7);hx.stroke();txt('LOCK',sp[0],sp[1]-34)}
+    else{hx.beginPath();hx.moveTo(sp[0],sp[1]-16);hx.lineTo(sp[0]+16,sp[1]);hx.lineTo(sp[0],sp[1]+16);hx.lineTo(sp[0]-16,sp[1]);hx.closePath();hx.stroke()}
+    txt((e.rng/1000).toFixed(1),sp[0],sp[1]+30);hx.strokeStyle=HG;hx.fillStyle=HG}
+  hx.beginPath();hx.arc(cx,cy,foc*Math.tan(10*DEG),0,7);hx.setLineDash([4,8]);hx.stroke();hx.setLineDash([]);
+  if(M.stores.bomb>0&&M.agl<4000){let p=P.p.slice(),v=scl(P.f,P.v);for(let i=0;i<500;i++){v[1]-=9.81*.08;p=add(p,scl(v,.08));if(p[1]<=groundAt(p[0],p[2]))break}
+    const sp=project(p);if(sp){hx.beginPath();hx.moveTo(cx,cy+10);hx.lineTo(sp[0],sp[1]-9);hx.stroke();hx.beginPath();hx.arc(sp[0],sp[1],9,0,7);hx.stroke();hx.fillRect(sp[0]-1.5,sp[1]-1.5,3,3)}}
+  if(game.practice&&M.wp<M.route.length){const w=M.route[M.wp],sp=project([w[0],groundAt(w[0],w[2])+200,w[2]]);if(sp)txt('WP'+M.wp,sp[0],sp[1]);else edgeArrow([w[0],P.p[1],w[2]],cx,cy,W,H)}
+  if(M.jam>0)txt('ECM ON '+Math.ceil(M.jam),cx-W*.3,cy+80);
+  if(M.incoming.length&&Math.floor(M.t*4)%2===0){hx.fillStyle='#ff4a3d';txt('טיל! נורים!',cx,cy-90,'center',true,'bold 30px Arial');hx.fillStyle=HG}
+  if(M.radioPending){hx.fillStyle='#ffb000';txt('קריאה בקשר',cx+W*.3,cy+80,'center',true,'bold 15px Arial');hx.fillStyle=HG}}
+
+/* ================= screens ================= */
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('show','#'+s.id===id))}
+function goMenu(){engineOff();document.body.classList.remove('a1');game.mode='menu';game.flow=null;show('#menu');updPadStatus()}
+function intro(which){game.diff=which==='a1'?'normal':$('#optDiff').value;game.practice=$('#optPractice').checked;game.introFor=which;
+  $('#introbody').innerHTML=which==='a1'?`<h2>סימולטור ירפ"א א' – מעקב אחרי מטוס אויב</h2><p class="note">לפניך מטוס אויב (משולש לבן עם כנפיים ישרות) שטס במהירות קבועה. בכל תרגיל הוא מתחיל במרחק קבוע ממך, ואתה שולט במטוס שלך בסטיק ובמצערת. התנועה של האויב על המסך היא בעיקר תוצאה של התנועה שלך – תיקונים קטנים ורגועים.</p>
+   <p class="note">המסך: במרכז עיגול – אזור המטרה – וצלב קטן. העיגול נצבע בצהוב בנעילה ובירוק כשהתרגיל הושלם או כשיש אישור ירי. משמאל "מד מהירות" – ההפרש בין המהירות שלך למהירות האויב (בקשרים; פסים ירוקים מעל 0 = אתה מהיר יותר ומתקרב). מימין "מרחק מהמטוס" עם סימוני טווח היעד. למטה: מצערת, זווית אל האויב, תחמושת, אחוזי פגיעה ותיבת מצב. הוראות התרגיל מוצגות בפינה הימנית העליונה והזמן שנותר במרכז למעלה. אם האויב יוצא מהמסך מופיע חץ שמצביע אליו; אם עברת אותו – הניסיון נכשל.</p>
+   <p class="note">8 תרגילים: תרגול חופשי, התקרבות, שמירת מרחק מדויקת, מעקב בפניות, בגובה, משולב, ושני תרגילי ירי: מחזיקים את האויב בתוך העיגול ובתוך חלון הירי 5 שניות כדי להינעל – רק אז אפשר לירות (החזקת כפתור הירי = צרור). תיבת "אחוזי פגיעה" מציגה את סיכוי הפגיעה הנוכחי: גבוה יותר ככל שקרובים יותר ושהמטרה במרכז העיגול. 100 פגזים, נדרשות 20 פגיעות. לכל תרגיל זמן קצוב ו-6 ניסיונות${game.practice?' (במצב תרגול – ללא הגבלה)':''}. כשנגמרים הניסיונות עוברים לתרגיל הבא – כמו במבחן, ממשיכים גם אחרי כישלון.</p>
+   <p class="note"><b>מצערת −10 עד +10:</b> המצערת קובעת את התאוצה. ב-0 (מרכז המצערת) המטוס שומר על המהירות שאליה הגעת; ערכים חיוביים מאיצים וערכים שליליים מאטים – ככל שהערך גדול יותר, התאוצה חזקה יותר. התאוצה נבנית ודועכת בהדרגה כמו במטוס אמיתי. כדי לחזור למהירות המטרה (מד המהירות על 0) צריך להאט או להאיץ בעצמך. במקלדת: W/S לשינוי המצערת ו-X לאיפוס ל-0.</p>
+   <p class="note">טיפ: כדי להתייצב במרחק, תן מצערת חיובית קטנה להתקרבות, ולפני שמגיעים לחלון תן מצערת שלילית עד שמד המהירות חוזר ל-0, ואז החזר את המצערת ל-0 – המרחק יישאר יציב.</p>`
+  :which==='s1'?`<h2>שלב א' – טיסה במבנה</h2><p class="note">מטוס מוביל טס לפניך. שמור אותו בתוך הטבעת שבמרכז ה-HUD ובמרחק <b>300 מטר</b> (פס הטווח בצד ימין). כששני התנאים מתקיימים ברצף, פס ההחזקה בתחתית מתמלא – מילוי מלא הוא הצלחה. <b>3 הצלחות</b> בכל רמה, 4 רמות בסך הכל. איבוד המוביל (מעל 2.5 ק"מ) או התקרבות מסוכנת מאפסים את הניסיון.</p>
+   <p class="note">טיפ: עשה תיקונים קטנים ומוקדמים, השתמש במצערת כדי לשמור טווח, ואל תרדוף אחרי המוביל בתנועות גסות. מרמה 3 נדלקות תקלות מערכת – לחץ על הכפתור הייעודי לכל תקלה.</p>`
+  :`<h2>שלב ב' – משימת ניווט ותקיפה</h2><p class="note">בעמוד הבא תוצג מפה ל-${DIFF[game.diff].brief} שניות בלבד. אחר כך תתחיל בטיסה ללא מפה – נווט מהזיכרון לפי נקודות הציון, הפצץ את מטרות העדיפות בלבד, הפעל ל"א בתוך טווח סוללות, הפל מטוסי אויב, שחרר נורים מול טילים, נטרל התראות וענה בקשר רק לאות הקריאה שלך.</p>`;
+  game.mode='intro';show('#intro')}
+function showDebrief(){engineOff();game.mode='debrief';const r=game.res;let h='<h2>תחקיר</h2>';
+  const viol=v=>v?`<tr><td>זמן בחריגת גובה</td><td>${(v.ALT||0).toFixed(1)} שנ'</td></tr><tr><td>זמן בחריגת מהירות</td><td>${(v.SPD||0).toFixed(1)} שנ'</td></tr><tr><td>זמן מחוץ לנתיב</td><td>${(v.NAV||0).toFixed(1)} שנ'</td></tr>`:'';
+  if(r.a1&&r.a1.course){h+=courseDebriefHTML(r)}
+  else if(r.a1){const ex=r.a1.res,pass=ex.filter(e=>e.passed).length,tot=r.a1.tot,pct=Math.round(pass/tot*100),gr=pct>=75?['טוב מאוד','#2b5e2e']:pct>=50?['טוב','#3c5a1f']:pct>=30?['גבולי','#6a4a00']:['דורש שיפור','#6a1a14'];
+    h+=`<h3>${r.a1.tut?'מדריך אינטראקטיבי – סיכום':'ירפ"א א\' – מעקב ויירוט'}</h3><div><span class="score">${pass}/${tot}</span><span class="grade" style="background:${gr[1]}">${gr[0]}</span></div>
+    <table><tr><th>תרגיל</th><th>תוצאה</th><th>ניסיונות</th><th>החזקה מקסימלית</th><th>% זמן בתנאים</th><th>אחוז פגיעה</th></tr>${ex.map(e=>`<tr><td>${esc(e.name)}</td><td class="${e.passed?'pos':'neg'}">${e.passed?'עבר':'לא עבר'}</td><td>${e.att}</td><td>${e.best.toFixed(1)} שנ'</td><td>${Math.round(e.on*100)}%</td><td>${e.acc==null?'—':Math.round(e.acc*100)+'%'}</td></tr>`).join('')}</table>
+    <h3>יומן אירועים</h3><div class="log">${r.a1.log.map(l=>`<div class="neg">${fmtT(l.t)} · ${esc(l.txt)}</div>`).join('')||'אין אירועים'}</div>
+    <p class="note">מספר התרגילים שעברת ומספר הניסיונות הם הערכה של הסימולטור. ספי המעבר של המבחן האמיתי אינם פומביים.</p>`}
+  if(r.s1){const s=r.s1;h+=`<h3>שלב א' – טיסה במבנה</h3><table><tr><td>רמות שהושלמו</td><td>${s.lvTimes.length}/4</td></tr>
+    ${s.lvTimes.map((t,i)=>`<tr><td>זמן רמה ${i+1}</td><td>${fmtT(t)}</td></tr>`).join('')}<tr><td>אחוז זמן בתוך התנאים</td><td>${s.onPct.toFixed(0)}%</td></tr><tr><td>איפוסים</td><td>${s.fails}</td></tr>
+    <tr><td>טעויות בתקלות מערכת</td><td>${s.log.filter(l=>l.p<0).length}</td></tr></table>`}
+  if(r.s2){const s=r.s2,gr=s.score>=80?['מצוין','#2b5e2e']:s.score>=65?['טוב','#3c5a1f']:s.score>=50?['גבולי','#6a4a00']:['דורש שיפור','#6a1a14'];
+    h+=`<h3>שלב ב' – משימה (${esc(s.why)})</h3><div><span class="score">${s.score}</span><span class="grade" style="background:${gr[1]}">${gr[0]}</span></div>
+    <table><tr><td>מטרות בעדיפות שהושמדו</td><td>${s.pri}/3</td></tr><tr><td>מטרות דמה שנפגעו</td><td>${s.dec}</td></tr><tr><td>מטוסי אויב שהופלו</td><td>${s.kills}</td></tr>
+    <tr><td>פגיעות בך</td><td>${s.hits}</td></tr><tr><td>התרסקויות</td><td>${s.crashes}</td></tr><tr><td>זמן משימה</td><td>${fmtT(s.t)}</td></tr>${viol(s.viol)}</table>
+    <h3>יומן אירועים</h3><div class="log">${s.log.map(l=>`<div class="${l.p<0?'neg':l.p>0?'pos':''}">${fmtT(l.t)} · ${esc(l.txt)}${l.p?` (${l.p>0?'+':''}${l.p.toFixed(1)})`:''}</div>`).join('')||'אין אירועים'}</div>
+    <p class="note">הציון הוא הערכה פנימית של הסימולטור (100 פחות קנסות). ספי המעבר של המבחן האמיתי אינם פומביים.</p>`}
+  $('#dbody').innerHTML=h;show('#debrief')}
+function updPadStatus(){const ps=pads().filter(Boolean);
+  if(document.body.dataset.app==='a'){const row=(t,ok,v)=>`<div class="srow"><span>${t}</span><span>${esc(v)}<i class="${ok?'on':''}"></i></span></div>`,ax=k=>!!(CFG.axes[k]&&getPad(CFG.axes[k]));
+    const all=ps.length&&ax('roll')&&ax('pitch')&&ax('throttle');
+    $('#padstatus').innerHTML=row('בקר טיסה',ps.length>0,ps.length?ps[0].id.replace(/\s*\(.*$/,'').slice(0,26):'לא מחובר')+row('ציר גלגול',ax('roll'),ax('roll')?'מוגדר':'—')+row('ציר עלרוד',ax('pitch'),ax('pitch')?'מוגדר':'—')+row('מצערת',ax('throttle'),ax('throttle')?'מוגדרת':'—')
+      +`<div class="shint">${ps.length?(all?'המערכת מוכנה לאימון.':'יש להשלים את הגדרת הצירים במסך "הגדרת סטיק ומצערת".'):'חבר סטיק ומצערת ולחץ על כפתור כלשהו בהם. ללא בקר ניתן להשתמש במקלדת: חיצים, W/S, X, רווח.'}</div>`;
+    const st=$('#sysState');if(st){st.textContent=all?'מערכת מוכנה':ps.length?'נדרשת הגדרה':'בקר לא מחובר';st.className=all?'':'warn'}const sd=$('#sysDot');if(sd)sd.className='sdot'+(all?'':' warn');return}
+  $('#padstatus').innerHTML=ps.length?`מחוברים: ${ps.map(p=>esc(p.id.slice(0,48))).join(' · ')}<br><span class="note">צירים: גלגול – ${CFG.axes.roll?'מוגדר':'לא'}, עלרוד – ${CFG.axes.pitch?'מוגדר':'לא'}, מצערת – ${CFG.axes.throttle?'מוגדר':'לא'}. כדאי לעבור על "הגדרת סטיק ומצערת" פעם אחת.</span>`
+  :'לא זוהה סטיק. חבר את הסטיק והמצערת ולחץ על כפתור כלשהו בהם. בינתיים אפשר לטוס עם מקלדת: '+(document.body.dataset.app==='a'?'חיצים, W/S למצערת, X לאיפוס, רווח לירי.':'חיצים, W/S, רווח, B, F, E, R, Q, 1–4.')}
+
+/* ================= setup screen ================= */
+const SET={cap:null,last:0};
+const ACTS=()=>document.body.dataset.app==='a'?[['fire','ירי / התחלת תרגיל','Space'],['pause','השהיה','Esc']]:ACTIONS;
+function buildSetup(){
+  $('#axtable').innerHTML='<tr><th>ציר</th><th>מקור</th><th></th><th>הפוך</th><th>ערך</th></tr>'+['roll','pitch','throttle'].map(a=>
+    `<tr><td>${AXN[a]}</td><td id="axb_${a}"></td><td><button class="btn sm" data-ax="${a}">זהה</button></td><td><input type="checkbox" data-inv="${a}" ${CFG.inv[a]?'checked':''}></td><td><span class="bar ${a==='throttle'?'':'c'}" id="axv_${a}"><i></i></span></td></tr>`).join('');
+  $('#bttable').innerHTML='<tr><th>פעולה</th><th>מקלדת</th><th>סטיק / מצערת</th><th></th></tr>'+ACTS().map(([a,n,k])=>
+    `<tr><td>${n}</td><td><kbd>${k}</kbd></td><td id="btb_${a}"></td><td><button class="btn sm" data-bt="${a}">הגדר</button> <button class="btn sm" data-clr="${a}">נקה</button></td></tr>`).join('');
+  $('#optDead').value=CFG.dead;$('#optSens').value=CFG.sens;refreshSetup()}
+function refreshSetup(){for(const a of['roll','pitch','throttle']){const b=CFG.axes[a],el=$('#axb_'+a);if(SET.cap&&SET.cap.kind==='axis'&&SET.cap.name===a)el.innerHTML='<span class="cap">הזז את הציר עד הסוף…</span>';
+    else el.textContent=b?`${b.id.slice(0,26)} · ${b.btn!=null?'ציר טריגר '+b.btn:'ציר '+b.axis}`:'—'}
+  for(const[a]of ACTS()){const el=$('#btb_'+a);if(SET.cap&&SET.cap.kind==='btn'&&SET.cap.name===a)el.innerHTML='<span class="cap">לחץ על הכפתור…</span>';else el.textContent=bindName(CFG.binds[a])}
+  $('#deadv').textContent=Number(CFG.dead).toFixed(2);$('#sensv').textContent=Number(CFG.sens).toFixed(2)}
+function snap(){return pads().map(p=>p?{axes:[...p.axes],buttons:p.buttons.map(b=>b.pressed||b.value>.5),bval:p.buttons.map(b=>b.value)}:null)}
+function setupTick(now){const ps=pads();
+  if(SET.cap){const c=SET.cap;
+    if(c.kind==='axis'){c.seen=c.seen||new Set();for(let i=0;i<ps.length;i++){const p=ps[i];if(!p||!c.snap[i])continue;p.axes.forEach((v,j)=>{if(SET.cap&&Math.abs(v-(c.snap[i].axes[j]??0))>.6){CFG.axes[c.name]={id:p.id,index:p.index,axis:j};SET.cap=null;refreshSetup()}});
+      if(SET.cap)p.buttons.forEach((bt,j)=>{const v=bt.value;if(v>.08&&v<.92)c.seen.add(i+':'+j);if(SET.cap&&c.seen.has(i+':'+j)&&Math.abs(v-(c.snap[i].bval[j]??0))>.6){CFG.axes[c.name]={id:p.id,index:p.index,btn:j};if(c.name==='throttle')CFG.inv.throttle=false;SET.cap=null;buildSetup()}})}}
+    else{if(c.pend){if(now-c.pend.t>250){const p=ps[c.pend.i];if(p){CFG.binds[c.name]={id:p.id,index:p.index,type:'a',n:c.pend.j,v:Math.round(p.axes[c.pend.j]*1000)/1000}}SET.cap=null;refreshSetup()}}
+      else for(let i=0;i<ps.length;i++){const p=ps[i];if(!p||!c.snap[i])continue;
+        const bi=p.buttons.findIndex((b,j)=>(b.pressed||b.value>.5)&&!c.snap[i].buttons[j]);if(bi>=0){CFG.binds[c.name]={id:p.id,index:p.index,type:'b',n:bi};SET.cap=null;refreshSetup();break}
+        const aj=p.axes.findIndex((v,j)=>Math.abs(v-(c.snap[i].axes[j]??0))>.5);if(aj>=0){c.pend={i,j:aj,t:now};break}}}
+    if(SET.cap&&now-SET.cap.t0>10000){SET.cap=null;refreshSetup()}}
+  if(now-SET.last<80)return;SET.last=now;
+  for(const a of['roll','pitch']){const v=axisVal(a),i=$('#axv_'+a+' i');if(!i)continue;const x=v??0;i.style.left=(x<0?50+x*50:50)+'%';i.style.width=Math.abs(x)*50+'%'}
+  {const v=thrVal(),i=$('#axv_throttle i');if(i){i.style.left='0';i.style.width=((v??0)*100)+'%'}}
+  $('#pads').innerHTML=ps.filter(Boolean).map(p=>`<div class="pad"><b>${esc(p.id)}</b> <span class="note">(#${p.index})</span><div class="ax">${p.axes.map((v,j)=>`<span>A${j} <span class="bar c" style="width:70px"><i style="left:${v<0?50+v*50:50}%;width:${Math.min(50,Math.abs(v)*50)}%"></i></span> ${v.toFixed(2)}</span>`).join('')}</div>
+    <div class="bt">${p.buttons.map((b,j)=>`<span class="${b.pressed||b.value>.5?'on':''}">${j+1}</span>`).join('')}</div></div>`).join('')||'<div class="pad">לא זוהו התקנים. לחץ על כפתור בסטיק כדי שהדפדפן יחשוף אותו.</div>'}
+document.addEventListener('click',e=>{const t=e.target.closest('button,input,a[data-go]');if(!t)return;audioInit();
+  const go=t.dataset.go;if(go){if(go==='menu')goMenu();else if(go==='guideA'||go==='aboutA'||go==='termsA'||go==='privacyA')show('#'+go);else if(go==='tut')startTutorial();else if(go==='course')showCourseMenu();else if(go==='help'){buildHelp();show('#help')}else if(go==='setup'){game.mode='setup';buildSetup();show('#setup')}
+    else if(go==='a1'){game.flow='a1';game.res={viol:{}};intro('a1')}else if(go==='full'){game.flow='full';game.res={viol:{}};intro('s1')}else if(go==='s1'){game.flow='s1';game.res={viol:{}};intro('s1')}else if(go==='s2'){game.flow='s2';game.res={viol:{}};intro('s2')}}
+  if(t.dataset.ex!=null&&t.closest('.testpick')){game.diff='normal';game.practice=true;game.flow='a1';game.res={viol:{}};startA1(+t.dataset.ex);return}
+  if(t.dataset.ax){SET.cap={kind:'axis',name:t.dataset.ax,snap:snap(),t0:performance.now()};refreshSetup()}
+  if(t.dataset.bt){SET.cap={kind:'btn',name:t.dataset.bt,snap:snap(),t0:performance.now()};refreshSetup()}
+  if(t.dataset.clr){CFG.binds[t.dataset.clr]=null;refreshSetup()}
+  if(t.dataset.inv){CFG.inv[t.dataset.inv]=t.checked}
+  if(t.tagName==='BUTTON')t.blur()});
+$('#optDead').addEventListener('input',e=>{CFG.dead=+e.target.value;refreshSetup()});
+$('#optSens').addEventListener('input',e=>{CFG.sens=+e.target.value;refreshSetup()});
+$('#setupSave').onclick=()=>{saveCfg();buildPanel();goMenu()};
+$('#setupReset').onclick=()=>{CFG=defCfg();CFG.auto=true;const p=pads().find(Boolean);if(p)autoConfig(p);buildSetup()};
+$('#introGo').onclick=()=>startIntro();
+$('#cmodules').addEventListener('click',e=>{const b=e.target.closest('[data-cmod]');if(b)startCourse('course',+b.dataset.cmod)});
+$('#cstart').onclick=()=>startCourse('course',0);
+$('#cresume').onclick=()=>{const p=cLoad().pos;startCourse('course',p&&p.modIdx||0)};
+$('#cpractice').onclick=()=>startCourse('practice');
+$('#cexam').onclick=()=>startCourse('exam');
+$('#lgo').onclick=()=>{if(game.mode!=='a1'||!A1)return;if(A1.course){courseGo();return}if(A1.state==='card')lessonGo()};
+$('#lskip').onclick=()=>{if(!A1||A1.state!=='card')return;if(A1.course){courseSkipModule();return}const X=A1.list[A1.i];A1.res.push({name:X.name,passed:false,att:0,t:0,best:0,on:0,acc:null,skip:true});A1.att=0;A1.i++;if(A1.i>=A1.list.length){show(null);finishA1()}else prepA1()};
+$('#briefGo').onclick=()=>startS2();
+$('#resume').onclick=()=>{game.paused=false;show(game.mode==='a1'&&A1&&(A1.state==='card'||A1.state==='summary')?'#lesson':null)};
+$('#abort').onclick=()=>{game.paused=false;if(game.mode==='a1'){show(null);finishA1()}else if(game.mode==='s2')endS2('המשימה הופסקה');else if(game.mode==='s1'){game.flow='s1';finishS1()}else goMenu()};
+$('#again').onclick=()=>{const f=game.flow;game.res={viol:{}};if(f==='tut'){startTutorial();return}if(f==='course'){if(game.courseKind==='course')showCourseMenu();else startCourse(game.courseKind);return}if(f==='a1')intro('a1');else if(f==='full'||f==='s1')intro('s1');else intro('s2')};
+function startIntro(){if(game.introFor==='a1')startA1();else if(game.introFor==='s1')startS1();else showBrief()}
+function buildHelp(){$('#helpkeys').innerHTML='<tr><th>פעולה</th><th>מקלדת</th><th>סטיק</th></tr>'+ACTIONS.map(([a,n,k])=>`<tr><td>${n}</td><td><kbd>${k}</kbd></td><td>${bindName(CFG.binds[a])}</td></tr>`).join('')}
+
+/* ================= main loop ================= */
+let last=performance.now();
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;poll(dt);
+  try{
+    if(game.mode==='a1'){
+      if(IN.just.has('pause')){game.paused=!game.paused;show(game.paused?'#pause':null)}
+      if(!game.paused)updA1(dt);
+      if(game.mode==='a1'){renderA1();drawHUDA1();engineSet(game.P?game.P.thr:0)}}
+    else if(game.mode==='s1'||game.mode==='s2'){
+      if(IN.just.has('pause')){game.paused=!game.paused;show(game.paused?'#pause':null)}
+      if(!game.paused){if(game.mode==='s1')updS1(dt);else updS2(dt)}
+      if(game.mode==='s1'||game.mode==='s2'){render();drawHUD();engineSet(game.P?game.P.thr:0);if((panelT+=dt)>.1){panelT=0;updPanel()}}}
+    else if(game.mode==='wait'){render();drawHUD()}
+    else if(game.mode==='brief'){S2.briefT-=dt;$('#bcount').textContent=game.practice?'∞':Math.max(0,Math.ceil(S2.briefT));if((!game.practice&&S2.briefT<=0)||IN.just.has('fire'))startS2()}
+    else if(game.mode==='intro'){if(IN.just.has('fire'))startIntro()}
+    else if(game.mode==='setup')setupTick(now);
+    else if(game.mode==='menu'){if(Math.floor(now/1000)!==Math.floor((now-dt*1000)/1000))updPadStatus()}
+  }catch(err){console.error(err);game.mode='menu';show('#menu');$('#padstatus').innerHTML='<span class="err">שגיאה: '+esc(err.message)+'</span>'}
+  requestAnimationFrame(frame)}
+
+/* ================= boot ================= */
+const APP_VERSION='1.5.0';
+const CONTACT_TEXT='[פרטי יצירת קשר]';
+setInterval(()=>{const e=document.getElementById('sysClock');if(!e)return;const d=new Date(),z=n=>String(n).padStart(2,'0');e.textContent=`${z(d.getDate())}.${z(d.getMonth()+1)}.${d.getFullYear()}  ${z(d.getHours())}:${z(d.getMinutes())}`},1000);
+let UPD_READY=null;
+if(window.updater){window.updater.onReady((ver,notes)=>{UPD_READY=ver;$('#updtxt').textContent=`גרסה חדשה (${ver}) הורדה ומוכנה.${notes?' '+notes:''} ${game.mode==='menu'?'':'תוכל לעדכן בחזרה לתפריט.'}`;$('#updbar').classList.add('show')});
+  document.addEventListener('click',e=>{if(e.target&&e.target.id==='updgo'&&UPD_READY)window.updater.apply()})}
+(function boot(){
+  document.querySelectorAll('.appver').forEach(e=>e.textContent=APP_VERSION+' Beta');
+  document.querySelectorAll('.contact').forEach(e=>e.textContent=CONTACT_TEXT);
+  if(!gl){$('#padstatus').innerHTML='<span class="err">הדפדפן לא תומך ב-WebGL2. פתח את הקובץ ב-Chrome או Edge עדכניים.</span>';return}
+  try{initGL()}catch(e){$('#padstatus').innerHTML='<span class="err">שגיאת גרפיקה: '+esc(e.message)+'</span>';return}
+  resetAlerts();buildPanel();updPadStatus();
+  game.P=makePlane([-9000,900,4000],1.2,200);
+  window.__game=game;window.__S=()=>({S1,S2});
+  requestAnimationFrame(frame);
+  render();
+})();
+</script>
+</body>
+</html>

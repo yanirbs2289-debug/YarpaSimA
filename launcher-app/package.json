@@ -1,0 +1,22 @@
+{
+  "name": "yarpa-launcher-app",
+  "version": "1.0.0",
+  "description": "Yarpa simulator desktop launcher",
+  "main": "main.js",
+  "author": "Yanir Ben Shimon",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --publish never"
+  },
+  "build": {
+    "appId": "com.yarpa.launcher",
+    "productName": "Yarpa Launcher",
+    "files": ["main.js", "preload.js", "lib/**", "renderer/**", "config.json"],
+    "win": { "target": "nsis", "artifactName": "YarpaLauncher-Setup-${version}.${ext}" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "perMachine": false }
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  }
+}

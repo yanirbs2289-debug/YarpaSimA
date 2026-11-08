@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'">
+<title>סימולטור ירפ"א</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{font-family:"Segoe UI",Arial,sans-serif;color:#e8eefb;background:#0a1226;
+  background-image:linear-gradient(rgba(140,160,200,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(140,160,200,.04) 1px,transparent 1px);background-size:24px 24px;overflow:hidden}
+.code{font-family:Consolas,monospace;font-size:10.5px;letter-spacing:.18em;color:#6f82a8}
+.view{display:none;height:100vh}.view.show{display:flex}
+.mark{width:34px;height:34px;border:1.5px solid #c6e24a;position:relative;flex:none}
+.mark::before,.mark::after{content:"";position:absolute;background:#c6e24a;left:50%;top:50%;transform:translate(-50%,-50%)}
+.mark::before{width:20px;height:1.5px}.mark::after{width:1.5px;height:20px}
+/* login */
+#login{align-items:center;justify-content:center}
+#login .box{width:380px;background:#0d172f;border:1px solid #26385c;border-top:2px solid #c6e24a}
+#login .head{display:flex;align-items:center;gap:14px;padding:20px 24px;border-bottom:1px solid #26385c;background:#0c1630}
+#login .head b{display:block;font-size:19px}
+form{padding:22px 24px}label{display:block;font-size:13px;color:#9fb0cc;margin-bottom:6px}
+input[type=text],input[type=password]{width:100%;padding:11px 12px;margin-bottom:16px;background:#0a1226;border:1px solid #33476e;color:#e8eefb;font:inherit;font-size:15px;outline:none;direction:ltr;text-align:left}
+input:focus{border-color:#c6e24a}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;color:#cdd8ee;margin-bottom:16px}
+button.pri{width:100%;padding:13px;background:#c6e24a;color:#0a1430;border:0;font:inherit;font-size:16px;font-weight:700;cursor:pointer}
+button.pri:disabled{opacity:.6;cursor:default}
+.msg{display:none;margin-bottom:16px;padding:10px 12px;font-size:14px;border-right:3px solid #ff6a5e;background:rgba(255,106,94,.08);color:#ffd0cb}
+.msg.show{display:block}.msg.ok{border-right-color:#36e04a;background:rgba(54,224,74,.08);color:#bdf5c8}
+.foot{padding:12px 24px;border-top:1px solid #1c2c4d;font-size:11.5px;color:#6f82a8;line-height:1.6}
+/* main */
+#main{flex-direction:column}
+header{display:flex;align-items:stretch;justify-content:space-between;background:#0c1630;border-bottom:1px solid #2a3b5e;box-shadow:inset 0 -2px 0 #c6e24a}
+.brand{display:flex;align-items:center;gap:14px;padding:12px 24px;border-left:1px solid #2a3b5e}.brand b{display:block;font-size:18px}.brand .code{display:block;margin-top:2px;text-align:right}
+.bar{display:flex;align-items:stretch}
+.cell{display:flex;flex-direction:column;justify-content:center;gap:3px;padding:8px 20px;border-right:1px solid #2a3b5e;font-size:13px;min-width:120px}
+.cell small{font-size:10px;color:#6f82a8}.cell .v{font-family:Consolas,monospace;direction:ltr;text-align:right}.cell .lv{font-weight:600}.cell .lv.warn{color:#ffb000}
+.out{background:none;border:0;border-right:1px solid #2a3b5e;color:#9fb0cc;padding:0 20px;font:inherit;font-size:13px;cursor:pointer}.out:hover{color:#c6e24a}
+.body{flex:1;display:grid;grid-template-columns:280px 1fr;min-height:0}
+aside{background:#0c1630;border-left:1px solid #2a3b5e;padding:16px 0;overflow:auto}
+aside .t{padding:0 20px 10px;font-size:12px;color:#6f82a8}
+.g{display:block;width:100%;text-align:right;background:none;border:0;border-right:3px solid transparent;color:#dfe6f5;padding:13px 20px;font:inherit;cursor:pointer}
+.g:hover{background:#111f3d}.g.sel{background:#15264a;border-right-color:#c6e24a}
+.g b{display:block;font-size:15px}.g small{display:block;color:#8c9cbd;font-size:12px;margin-top:3px}.g.na{opacity:.5}
+.stage{position:relative;display:flex;flex-direction:column;justify-content:flex-end;padding:36px 44px;overflow:hidden;background:radial-gradient(ellipse at 30% 30%,#1a3575,#0f1d3a 45%,#0a1226 100%)}
+.stage h1{margin:0;font-size:38px}.stage h2{margin:6px 0 14px;font-size:17px;color:#c6e24a;font-weight:500}.stage p{margin:0 0 22px;color:#b8c5de;line-height:1.7;max-width:560px}
+.play{display:inline-flex;align-items:center;gap:12px;padding:16px 54px;background:#c6e24a;color:#0a1430;border:0;font:inherit;font-size:20px;font-weight:800;cursor:pointer;align-self:flex-start}
+.play:disabled{background:#3a4a6a;color:#9fb0cc;cursor:default}
+.prog{margin-top:16px;max-width:360px;display:none}.prog.show{display:block}
+.track{height:8px;background:#0c1834;border:1px solid #2a3b5e;overflow:hidden}.fill{height:100%;width:0;background:#c6e24a;transition:width .2s}
+.ptxt{margin-top:7px;font-size:12.5px;color:#9fb0cc}
+.hint{margin-top:14px;font-size:12px;color:#7d8fb3;max-width:560px}
+.alert{display:none;margin:0;padding:10px 24px;background:#4a1812;border-bottom:1px solid #8a2b20;color:#ffd0cb;font-size:13.5px}
+.alert.show{display:block}.alert.warn{background:#3a2e00;border-color:#7a6500;color:#ffe6a6}
+footer{padding:8px 24px;background:#0c1630;border-top:1px solid #2a3b5e;font-size:11px;color:#6f82a8;display:flex;justify-content:space-between}
+#splash{align-items:center;justify-content:center;flex-direction:column;gap:14px;color:#6f82a8}
+.spin{width:30px;height:30px;border:3px solid #26385c;border-top-color:#c6e24a;border-radius:50%;animation:s 1s linear infinite}@keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="view show" id="splash"><div class="spin"></div><div>טוען…</div></div>
+
+<div class="view" id="login">
+  <div class="box">
+    <div class="head"><span class="mark"></span><div><b>סימולטור ירפ"א</b><span class="code" dir="ltr">YARPA · TRAINING LAUNCHER</span></div></div>
+    <form id="lf">
+      <div class="msg" id="lmsg"></div>
+      <label for="u">שם משתמש</label><input id="u" type="text" autocomplete="username" required autofocus>
+      <label for="p">סיסמה</label><input id="p" type="password" autocomplete="current-password" required>
+      <label class="chk"><input type="checkbox" id="rem" checked> השאר אותי מחובר במחשב הזה</label>
+      <button class="pri" id="go" type="submit">כניסה</button>
+    </form>
+    <div class="foot">הגישה למשתמשים מורשים בלבד ולתקופה מוגבלת.<br>© 2026 יניר בן שמעון · כל הזכויות שמורות</div>
+  </div>
+</div>
+
+<div class="view" id="main">
+  <header>
+    <div class="brand"><span class="mark"></span><div><b>סימולטור ירפ"א</b><span class="code" dir="ltr">YARPA LAUNCHER</span></div></div>
+    <div class="bar">
+      <div class="cell"><small>משתמש</small><span id="who">—</span></div>
+      <div class="cell"><small>הגישה מסתיימת בעוד</small><span class="lv" id="left">—</span></div>
+      <button class="out" id="logout">התנתקות</button>
+    </div>
+  </header>
+  <div class="alert" id="alert"></div>
+  <div class="body">
+    <aside><div class="t">סימולטורים</div><div id="list"></div></aside>
+    <section class="stage">
+      <span class="code" id="gcode">—</span>
+      <h1 id="gtitle">—</h1><h2 id="gsub"></h2><p id="gdesc"></p>
+      <button class="play" id="play" disabled>שחק ◄</button>
+      <div class="prog" id="prog"><div class="track"><div class="fill" id="fill"></div></div><div class="ptxt" id="ptxt"></div></div>
+      <div class="hint">בהפעלה ראשונה הסימולטור יורד למחשב (פעם אחת). חבר סטיק ומצערת לפני ההפעלה. F11 – מסך מלא בחלון המשחק.</div>
+    </section>
+  </div>
+  <footer><span>סימולטור אימון עצמאי. אינו התוכנה הרשמית של צה"ל או של חיל האוויר.</span><span>© 2026 יניר בן שמעון</span></footer>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
